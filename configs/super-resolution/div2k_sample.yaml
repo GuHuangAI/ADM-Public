@@ -1,0 +1,94 @@
+model:
+  class_name: ddm.ddm_const.LatentDiffusion
+  image_size: [512, 512]
+  ckpt_path:
+  ignore_keys: []
+  only_model: False
+  sampling_timesteps: 10
+  loss_type: l2
+  start_dist: normal
+  perceptual_weight: 0
+  scale_factor: 0.195
+  scale_by_std: True
+  default_scale: True
+  scale_by_softsign: False
+  eps: !!float 1e-4
+  sigma_max: 1
+  sigma_min: 0.01
+  ldm: True
+  weighting_loss: True
+  use_l1: True
+  use_augment: False
+  first_stage:
+    class_name: ddm.encoder_decoder.AutoencoderKL
+    embed_dim: 3
+    lossconfig:
+      disc_start: 50001
+      kl_weight: 0.000001
+      disc_weight: 0.5
+    ddconfig:
+      double_z: True
+      z_channels: 3
+      resolution: [ 512, 512 ]
+      in_channels: 3
+      out_ch: 3
+      ch: 128
+      ch_mult: [ 1,2,4 ]  # num_down = len(ch_mult)-1
+      num_res_blocks: 2
+      attn_resolutions: [ ]
+      dropout: 0.0
+    ckpt_path: "/nfs/data/pretrain_weight/const-sde/div2k_first_stage.pt"
+  unet:
+    class_name: unet.cond_unet.Unet
+    fix_bb: False
+    cond_net: swin
+    dim: 128
+    channels: 3
+    out_mul: 1
+    dim_mults: [ 1, 2, 4, 4] # num_down = len(dim_mults)
+    cond_in_dim: 3
+    cond_dim: 128
+    cond_dim_mults: [ ] # num_down = len(cond_dim_mults)
+    window_sizes1: [ [ 8, 8 ], [ 4, 4 ], [ 2, 2 ], [ 1, 1 ] ]
+    window_sizes2: [ [ 4, 4 ], [ 2, 2 ], [ 1, 1 ], [ 1, 1 ] ]
+    fourier_scale: 16
+    cond_pe: False
+    num_pos_feats: 128
+    cond_feature_size: [ 128, 128 ]
+#    ckpt_path: "/nfs/data/pretrain_weight/cifar10_ncsnpp_deep_continuous.pth"
+
+data:
+  class_name: ddm.data.SRDatasetTest
+  image_size: [512, 512]
+  split: val
+  img_folder: "/nfs/data/diffusion_data/DIV2K/DIV2K_valid_HR/"
+  augment_horizontal_flip: False
+  batch_size: 16
+  num_workers: 4
+
+trainer:
+  gradient_accumulate_every: 2
+  lr: !!float 5e-5
+  min_lr: !!float 5e-6
+  train_num_steps: 400000
+  save_and_sample_every: 10000
+  log_freq: 500
+  results_folder: "/nfs/data/diffusion_data/DIV2K/results_ddm_const_cond_unet"
+  amp: False
+  fp16: False
+  resume_milestone: 0
+  test_before: True
+  ema_update_after_step: 40000
+  ema_update_every: 10
+
+sampler:
+  batch_size: 1
+  out_channels: 3
+  sample_num: 100
+  crop_size: [128, 128]
+  stride: [64, 64]
+  use_ema: True
+  test_in_train: False
+  ckpt_path: "/nfs/data/diffusion_data/DIV2K/results_ddm_const_cond_unet/model-12.pt"
+  save_folder: "/nfs/data/diffusion_data/DIV2K/results_ddm_const_cond_unet/samples_ddm_const_model_12_step10"
+  target_path: "/nfs/data/diffusion_data/DIV2K/DIV2K_valid_HR/"

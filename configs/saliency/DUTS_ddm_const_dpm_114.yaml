@@ -1,0 +1,68 @@
+model:
+  class_name: ddm.ddm_const.DDPM
+  image_size: [128, 128]
+  ckpt_path:
+  ignore_keys: []
+  only_model: False
+  sampling_timesteps: 10
+  loss_type: l2
+  start_dist: normal
+  perceptual_weight: 1.0
+  eps: !!float 1e-4
+  sigma_max: 1
+  sigma_min: 0.01
+  ldm: False
+  weighting_loss: True
+  use_l1: True
+  use_augment: False
+  unet:
+    class_name: unet.cond_unet.Unet
+    fix_bb: False
+    cond_net: swin
+    dim: 128
+    channels: 1
+    out_mul: 1
+    dim_mults: [ 1, 2, 4, 4 ] # num_down = len(dim_mults)
+    cond_in_dim: 3
+    cond_dim: 128
+    cond_dim_mults: [ ] # num_down = len(cond_dim_mults)
+    window_sizes1: [ [ 8, 8 ], [ 4, 4 ], [ 2, 2 ], [ 1, 1 ] ]
+    window_sizes2: [ [ 8, 8 ], [ 4, 4 ], [ 2, 2 ], [ 1, 1 ] ]
+    fourier_scale: 16
+    cond_pe: False
+    num_pos_feats: 128
+    cond_feature_size: [ 128, 128 ]
+    #ckpt_path: "/nfs/data/pretrain_weight/cifar10_ncsnpp_deep_continuous.pth"
+
+data:
+  class_name: ddm.data.DUTSDataset
+  image_size: [128, 128]
+  data_root: '/nfs/data/diffusion_data/DUTS/'
+  split: train
+  augment_horizontal_flip: True
+  batch_size: 12
+  num_workers: 4
+
+trainer:
+  gradient_accumulate_every: 2
+  lr: !!float 5e-5
+  min_lr: !!float 5e-6
+  train_num_steps: 400000
+  save_and_sample_every: 10000
+  log_freq: 500
+  results_folder: "/nfs/data/diffusion_data/DUTS/results_ddm_const_dpm_cond_unet"
+  amp: False
+  fp16: False
+  resume_milestone: 0
+  test_before: True
+  ema_update_after_step: 20000
+  ema_update_every: 4
+
+sampler:
+  batch_size: 128
+  sample_num: 50000
+  use_ema: True
+  test_in_train: False
+  ckpt_path: "/data/huang/cifar-10-python/results_ddm_const_dpm_cond_unet/model-40.pt"
+  save_folder: "/data/huang/cifar-10-python/results_ddm_const_dpm_cond_unet/samples"
+  target_path: "/data/huang/cifar-10-python/cifar-10-train-png"

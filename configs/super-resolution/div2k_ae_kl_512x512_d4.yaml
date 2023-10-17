@@ -1,0 +1,36 @@
+model:
+  class_name: ddm.encoder_decoder.AutoencoderKL
+  embed_dim: 3
+  lossconfig:
+    disc_start: 20001
+    kl_weight: 0.000001
+    disc_weight: 0.5
+  ddconfig:
+    double_z: True
+    z_channels: 3
+    resolution: [512, 512]
+    in_channels: 3
+    out_ch: 3
+    ch: 128
+    ch_mult: [ 1,2,4 ]  # num_down = len(ch_mult)-1
+    num_res_blocks: 2
+    attn_resolutions: [ ]
+    dropout: 0.0
+  ckpt_path: '/root/autodl-tmp/pretrain_weights/model-kl-d4.ckpt'
+
+data:
+  class_name: ddm.data.SRDataset
+  img_folder: '/root/autodl-tmp/DIV2K/DIV2K_train_HR/'
+  augment_horizontal_flip: True
+  batch_size: 4
+
+trainer:
+  gradient_accumulate_every: 2
+  lr: !!float 5e-6
+  min_lr: !!float 1e-6
+  train_num_steps: 100000
+  save_and_sample_every: 10000
+  log_freq: 100
+  results_folder: '/root/autodl-tmp/DIV2K/results_ae_kl_512x512_d4'
+  amp: False
+  fp16: False

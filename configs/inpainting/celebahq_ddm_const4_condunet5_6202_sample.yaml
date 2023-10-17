@@ -1,0 +1,110 @@
+model:
+  class_name: ddm.ddm_const.LatentDiffusion
+  image_size: [256, 256]
+  ckpt_path:
+  ignore_keys: []
+  only_model: False
+  sampling_timesteps: 10
+  loss_type: l2
+  start_dist: normal
+  perceptual_weight: 0
+  scale_factor: 0.165
+  scale_by_std: True
+  default_scale: True
+  scale_by_softsign: False
+  eps: !!float 1e-4
+  sigma_max: 1
+  sigma_min: 0.01
+  ldm: True
+  weighting_loss: False
+  use_disloss: False
+  use_l1: True
+  use_augment: False
+  loss_main:
+    class_name: ddm.loss.MSE_Loss
+  loss_vlb:
+    class_name: ddm.loss.MAE_Loss
+  loss_dis:
+    class_name: ddm.loss.MSE_Loss
+  first_stage:
+    class_name: ddm.encoder_decoder.AutoencoderKL
+    embed_dim: 3
+    lossconfig:
+      disc_start: 20001
+      kl_weight: 0.000001
+      disc_weight: 0.5
+    ddconfig:
+      double_z: True
+      z_channels: 3
+      resolution: [ 256, 256 ]
+      in_channels: 3
+      out_ch: 3
+      ch: 128
+      ch_mult: [ 1,2,4 ]  # num_down = len(ch_mult)-1
+      num_res_blocks: 2
+      attn_resolutions: [ ]
+      dropout: 0.0
+#    ckpt_path: '/data/huang/pretrain_weights/ldm-ae/model-kl-d4.ckpt'
+    ckpt_path: "/data/huang/celebahq/results_ae_kl_256x256_d4/model-10.pt"
+  unet:
+    class_name: unet.cond_unet.Unet
+    fix_bb: False
+    cond_net: swin
+    dim: 96
+    channels: 3
+    out_mul: 1
+    dim_mults: [ 1, 2, 4, 8 ] # num_down = len(dim_mults)
+    cond_in_dim: 3
+    cond_dim: 128
+    cond_dim_mults: [ ] # num_down = len(cond_dim_mults)
+    window_sizes1: [ [ 8, 8 ], [ 4, 4 ], [ 2, 2 ], [ 1, 1 ] ]
+    window_sizes2: [ [ 8, 8 ], [ 4, 4 ], [ 2, 2 ], [ 1, 1 ] ]
+    fourier_scale: 16
+    cond_pe: False
+    num_pos_feats: 128
+    cond_feature_size: [ 64, 64 ]
+
+data:
+  class_name: ddm.data.InpaintDataset
+  image_size: [256, 256]
+#  img_folder: '/data/huang/cifar-10-python/'
+  img_folder: "/data/huang/celebahq/celeba_hq_256/"
+  augment_horizontal_flip: False
+  split: test
+  batch_size: 48
+  num_workers: 4
+
+eval:
+  begin_ckpt: 1
+  end_ckpt: 35
+  num_samples: 30000
+  batch_size: 64
+  use_ema: True
+  workdir: "/data/huang/cifar-10-python/results_ddm_const"
+#  gt_stats: "/nfs/data/diffusion_data/cifar/cifar10/results_etp_const_sde4_ncsnpp6/gt_feature.pth"
+  gt_stats:
+
+trainer:
+  gradient_accumulate_every: 2
+  lr: !!float 4e-5
+  min_lr: !!float 4e-6
+  train_num_steps: 400000
+  save_and_sample_every: 10000
+  log_freq: 500
+  results_folder: "/data/huang/celebahq/results_ddm_const_ldm_cond_unet_inpainting"
+#  results_folder: "/data/huang/cifar-10-python/results_etp_const_sde4_ncsnpp10"
+  amp: False
+  fp16: False
+  resume_milestone: 0
+  test_before: True
+  ema_update_after_step: 20000
+  ema_update_every: 8
+
+sampler:
+  batch_size: 32
+  out_channels: 3
+  sample_num: 2000
+  use_ema: True
+  ckpt_path: "/data/huang/celebahq/results_ddm_const_ldm_cond_unet_inpainting/model-38.pt"
+  save_folder: "/data/huang/celebahq/results_ddm_const_ldm_cond_unet_inpainting/samples_model-38-step10"
+  target_path: "/data/huang/celebahq/celeba_hq_256"
