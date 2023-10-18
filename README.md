@@ -37,9 +37,6 @@ celebahq
 |   |-- 00000.jpg
 |   |-- 00001.jpg
 |   |-- XXXXX.jpg
-|-- condition_images
-|   |-- XXX.jpg
-|   |-- XXX.jpg
 ```
 
 (c) conditional DIV2K:
