@@ -80,7 +80,7 @@ accelerate launch train_uncond_dpm.py --cfg ./configs/cifar10/ddm_uncond_const_u
 ~~~
 accelerate launch train_vae.py --cfg ./configs/celebahq/celeb_ae_kl_256x256_d4.yaml
 ~~~
-2. you should add the model weights in the first step to config file `./configs/celebahq/celeb_uncond_ddm_const_uncond_unet_ldm.yaml`, then train latent diffusion model:
+2. you should add the model weights in the first step to config file `./configs/celebahq/celeb_uncond_ddm_const_uncond_unet_ldm.yaml` (**line 41**), then train latent diffusion model:
 ~~~
 accelerate launch train_uncond_ldm.py --cfg ./configs/celebahq/celeb_uncond_ddm_const_uncond_unet_ldm.yaml
 ~~~

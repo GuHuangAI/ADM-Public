@@ -38,7 +38,6 @@ model:
       num_res_blocks: 2
       attn_resolutions: [ ]
       dropout: 0.0
-#    ckpt_path: '/data/huang/pretrain_weights/ldm-ae/model-kl-d4.ckpt'
     ckpt_path: "/data/huang/celebahq/results_ae_kl_256x256_d4/model-10.pt"
   unet:
     class_name: unet.uncond_unet.EDMPrecond
