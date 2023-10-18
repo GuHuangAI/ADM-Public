@@ -86,7 +86,7 @@ If you have some questions, please concat with huangai@nudt.edu.cn.
 ## Citation
 ~~~
 @article{huang2023decoupled,
-  title={Decoupled Diffusion Models with Explicit Transition Probability},
+  title={Decoupled Diffusion Models: Image to Zero and Zero to Noise},
   author={Huang, Yuhang and Qin, Zheng and Liu, Xinwang and Xu, Kai},
   journal={arXiv preprint arXiv:2306.13720},
   year={2023}
