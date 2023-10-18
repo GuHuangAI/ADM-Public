@@ -72,7 +72,7 @@ DUTS
 
 ## III. Unconditional training on image space for Cifar10 dataset.
 ~~~
-accelerate launch train_uncond_dpm.py --cfg ./configs/cifar10/XXX.yaml
+accelerate launch train_uncond_dpm.py --cfg ./configs/cifar10/ddm_uncond_const_uncond_unet.yaml
 ~~~
 
 ## IV. Unconditional training on latent space for CelebAHQ256 dataset.
@@ -80,9 +80,9 @@ accelerate launch train_uncond_dpm.py --cfg ./configs/cifar10/XXX.yaml
 ~~~
 accelerate launch train_vae.py --cfg ./configs/celebahq/celeb_ae_kl_256x256_d4.yaml
 ~~~
-2. you should add the model weights in the first step to config file `./configs/celebahq/XXX.yaml`, then train latent diffusion model:
+2. you should add the model weights in the first step to config file `./configs/celebahq/celeb_uncond_ddm_const_uncond_unet_ldm.yaml`, then train latent diffusion model:
 ~~~
-accelerate launch train_uncond_ldm.py --cfg ./configs/celebahq/XXX.yaml
+accelerate launch train_uncond_ldm.py --cfg ./configs/celebahq/celeb_uncond_ddm_const_uncond_unet_ldm.yaml
 ~~~
 
 ## V. Conditional training on latent space for DIV2K dataset. (super-resolution task for example.)
