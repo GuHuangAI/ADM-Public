@@ -81,3 +81,14 @@ python ./eval_downstream/sample_inpainting.py --cfg ./configs/celebahq/celeb_unc
 ~~~
 python ./eval_downstream/eval_saliency.py --cfg ./configs/saliency/DUTS_sample_114.yaml
 ~~~
+## Concat
+If you have some questions, please concat with huangai@nudt.edu.cn.
+## Citation
+~~~
+@article{huang2023decoupled,
+  title={Decoupled Diffusion Models with Explicit Transition Probability},
+  author={Huang, Yuhang and Qin, Zheng and Liu, Xinwang and Xu, Kai},
+  journal={arXiv preprint arXiv:2306.13720},
+  year={2023}
+}
+~~~
