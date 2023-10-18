@@ -69,7 +69,7 @@ eval:
   num_samples: 30000
   batch_size: 64
   use_ema: True
-  workdir: "/data/huang/cifar-10-python/results_ddm_const"
+  workdir: "/data/huang/celebahq/results_ddm_const_ldm_uncond_unet"
 #  gt_stats: "/nfs/data/diffusion_data/cifar/cifar10/results_etp_const_sde4_ncsnpp6/gt_feature.pth"
   gt_stats:
 

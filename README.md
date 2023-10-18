@@ -20,15 +20,54 @@ accelerate config
 ~~~
 
 ## II. Prepare Data.
-The file structure should look like:
+The file structure should look like:  
+(a) unconditional cifar10:
 ```commandline
-data_root
-|-- images
-|   |-- XXX.jpg
-|   |-- XXX.jpg
+cifar-10-python
+|-- cifar-10-batches-py
+|   |-- data_batch_1
+|   |-- data_batch_2
+|   |-- XXX
+```
+
+(b) unconditional Celeb-AHQ:
+```commandline
+celebahq
+|-- celeba_hq_256
+|   |-- 00000.jpg
+|   |-- 00001.jpg
+|   |-- XXXXX.jpg
 |-- condition_images
 |   |-- XXX.jpg
 |   |-- XXX.jpg
+```
+
+(c) conditional DIV2K:
+```commandline
+DIV2K
+|-- DIV2K_train_HR
+|   |-- 0001.png
+|   |-- 0002.png
+|   |-- XXXX.png
+|-- DIV2K_valid_HR
+|   |-- 0801.png
+|   |-- 0802.png
+|   |-- XXXX.png
+```
+
+(d) conditional DUTS:
+```commandline
+DUTS
+|-- DUTS-TR
+|   |-- DUTS-TR-Image
+|   |   |-- XXX.jpg
+|   |-- DUTS-TR-Mask
+|   |   |-- XXX.png
+|-- DUTS-TE
+|   |-- DUTS-TE-Image
+|   |   |-- XXX.jpg
+|   |-- DUTS-TE-Mask
+|   |   |-- XXX.png
 ```
 
 ## III. Unconditional training on image space for Cifar10 dataset.
