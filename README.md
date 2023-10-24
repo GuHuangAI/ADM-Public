@@ -119,6 +119,8 @@ python ./eval_downstream/eval_saliency.py --cfg ./configs/saliency/DUTS_sample_1
 ~~~
 ## Concat
 If you have some questions, please concat with huangai@nudt.edu.cn.
+## Thanks
+Thanks to the public repos: [DDPM](https://github.com/lucidrains/denoising-diffusion-pytorch) and [LDM](https://github.com/CompVis/latent-diffusion) for providing the base code.
 ## Citation
 ~~~
 @article{huang2023decoupled,
