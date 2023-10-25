@@ -5,6 +5,10 @@
 ## Framework
 ![Framework](assets/framework.png)
 
+# News
+- We now modify the two-branch UNet, resulting a single-decoder UNet architecture.  
+You can use the single-decoder UNet in [uncond-unet-sd](unet/uncond_unet_sd.py) and [cond-unet-sd](unet/cond_unet_sd.py).
+
 ## I. Before Starting.
 1. install torch
 ~~~
