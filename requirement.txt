@@ -25,5 +25,5 @@ matplotlib
 #jaxlib==0.4.6
 numpy==1.23.5
 transformers==4.6
-clip
+# clip; we find that the clip package installed via pip is invalid, please refer to [clip](https://github.com/openai/CLIP).
 kornia

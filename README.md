@@ -8,6 +8,7 @@
 # News
 - We now modify the two-branch UNet, resulting a single-decoder UNet architecture.  
 You can use the single-decoder UNet in [uncond-unet-sd](unet/uncond_unet_sd.py) and [cond-unet-sd](unet/cond_unet_sd.py).
+- Have updated training for text-2-img, please refer to [text-2-img](#viii-training-for-text-2-iamge).
 
 ## I. Before Starting.
 1. install torch
@@ -121,6 +122,20 @@ python ./eval_downstream/sample_inpainting.py --cfg ./configs/celebahq/celeb_unc
 ~~~
 python ./eval_downstream/eval_saliency.py --cfg ./configs/saliency/DUTS_sample_114.yaml
 ~~~
+
+## VIII. Training for Text-2-Iamge
+1. download laion data from [laion](https://laion.ai/blog/laion-400-open-dataset/). 
+2. download metadata using `img2dataset`, please refer to [here](https://github.com/rom1504/img2dataset). 
+3. install clip. 
+~~~
+pip install ftfy regex tqdm
+pip install git+https://github.com/openai/CLIP.git
+~~~
+4. training with config file [text-2-img](configs/text2img/ddm_uncond_const.yaml). 
+~~~
+accelerate launch train_cond_ldm.py --cfg ./configs/text2img/ddm_uncond_const.yaml
+~~~
+
 ## Concat
 If you have some questions, please concat with huangai@nudt.edu.cn.
 ## Thanks
