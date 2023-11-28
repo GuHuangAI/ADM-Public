@@ -131,7 +131,14 @@ python ./eval_downstream/eval_saliency.py --cfg ./configs/saliency/DUTS_sample_1
 pip install ftfy regex tqdm
 pip install git+https://github.com/openai/CLIP.git
 ~~~
-4. training with config file [text-2-img](configs/text2img/ddm_uncond_const.yaml). 
+4. The final data structure looks like:
+```commandline
+|-- laion
+|   |-- 00000.tar
+|   |-- 00001.tar
+|   |-- XXXXX.tar
+```
+5. training with config file [text-2-img](configs/text2img/ddm_uncond_const.yaml). 
 ~~~
 accelerate launch train_cond_ldm.py --cfg ./configs/text2img/ddm_uncond_const.yaml
 ~~~
