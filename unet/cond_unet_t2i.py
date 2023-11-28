@@ -1,3 +1,4 @@
+import clip
 import fvcore.common.config
 import torch
 import torch.nn as nn
@@ -5,8 +6,6 @@ import math
 import torch.nn.functional as F
 from functools import partial
 from einops import rearrange, reduce
-from .efficientnet import efficientnet_b7, EfficientNet_B7_Weights
-from .resnet import resnet101, ResNet101_Weights
 
 
 ### Compared to unet4:
@@ -553,6 +552,64 @@ class Attention(nn.Module):
         out = rearrange(out, 'b h (x y) d -> b (h d) x y', x=h, y=w)
         return self.to_out(out)
 
+class CondAttention(nn.Module): # Multi-Scale Window-Attention
+    def __init__(self, dim, dim2, hidden_dim, heads=4, window_size_q=[4, 4],
+                 window_size_k=[[4, 4], [2, 2], [1, 1]], drop=0.1):
+        super(CondAttention, self).__init__()
+        # assert  dim == heads * dim_head
+        dim_head = hidden_dim // heads
+        self.scale = dim_head ** -0.5
+        self.heads = heads
+        # hidden_dim = dim_head * heads
+        # self.qkv = nn.Conv3d(dim, hidden_dim*3, 1)
+        self.q_lin = nn.Linear(dim, hidden_dim)
+        self.k_lin = nn.Linear(dim2, hidden_dim)
+        self.v_lin = nn.Linear(dim2, hidden_dim)
+        self.pos_enc = PositionEmbeddingSine(hidden_dim)
+        self.window_size_q = window_size_q
+        self.avgpool_q = nn.AdaptiveAvgPool2d(output_size=window_size_q)
+        # self.avgpool_ks = nn.ModuleList()
+        # for i in range(len(window_size_k)):
+        #     self.avgpool_ks.append(nn.AdaptiveAvgPool2d(output_size=window_size_k[i]))
+        self.softmax = nn.Softmax(dim=-1)
+        self.mlp = Mlp(in_features=hidden_dim, hidden_features=hidden_dim*2, out_features=dim, drop=drop)
+        self.out_conv = nn.Sequential(
+            nn.Conv2d(dim, dim, 1),
+            nn.GroupNorm(8, dim)
+        )
+
+    def forward(self, x, cond):
+        # x: B, C, H, W
+        # cond: B, C
+        B, C, H, W = x.shape
+        shortcut = x
+        q_s = self.avgpool_q(x)
+        length = q_s.shape[-2] * q_s.shape[-1]
+        kg = cond.unsqueeze(1)#.expand(-1, length, -1)
+        qg = self.avgpool_q(x).permute(0, 2, 3, 1).contiguous()
+        qg = qg + self.pos_enc(qg)
+        qg = qg.view(B, -1, C)
+
+
+        num_window_q = qg.shape[1]
+        num_window_k = kg.shape[1]
+        qg = self.q_lin(qg).reshape(B, num_window_q, self.heads, C // self.heads).permute(0, 2, 1,
+                                                                                           3).contiguous()
+        kg2 = self.k_lin(kg).reshape(B, num_window_k, self.heads, C // self.heads).permute(0, 2, 1,
+                                                                                            3).contiguous()
+        vg = self.v_lin(kg).reshape(B, num_window_k, self.heads, C // self.heads).permute(0, 2, 1,
+                                                                                           3).contiguous()
+        kg = kg2
+        attn = (qg @ kg.transpose(-2, -1))
+        attn = self.softmax(attn)
+        qg = (attn @ vg).transpose(1, 2).reshape(B, num_window_q, C)
+        qg = qg.transpose(1, 2).reshape(B, C, self.window_size_q[0], self.window_size_q[1])
+        # qg = F.interpolate(qg, size=(H1p, W1p), mode='bilinear', align_corners=False)
+        q_s = q_s + qg
+        q_s = q_s + self.mlp(q_s)
+        q_s = F.interpolate(q_s, size=(H, W), mode='bilinear', align_corners=False)
+        out = shortcut + self.out_conv(q_s)
+        return out
 
 class ConditionEncoder(nn.Module):
     def __init__(self,
@@ -609,7 +666,7 @@ class Unet(nn.Module):
         window_sizes1=[[16, 16], [8, 8], [4, 4], [2, 2]],
         window_sizes2=[[16, 16], [8, 8], [4, 4], [2, 2]],
         fourier_scale=16,
-        precondition=True,
+        precondition=False,
         ckpt_path=None,
         ignore_keys=[],
         cfg={},
@@ -634,24 +691,9 @@ class Unet(nn.Module):
         # self.init_conv_mask = ConditionEncoder(down_dim_mults=cond_dim_mults, dim=cond_dim,
         #                                        in_dim=cond_in_dim, out_dim=init_dim)
 
-        if cfg.cond_net == 'effnet':
-            f_condnet = 48
-            self.init_conv_mask = efficientnet_b7(weights=EfficientNet_B7_Weights)
-        elif cfg.cond_net == 'resnet':
-            f_condnet = 256
-            self.init_conv_mask = resnet101(weights=ResNet101_Weights)
-        elif cfg.cond_net == 'swin':
-            f_condnet = 128
-            if cfg.get('single_channel_cond', False):
-                from .swin_transformer_for_sci import swin_b, Swin_B_Weights
-                self.init_conv_mask = swin_b(weights=Swin_B_Weights)
-            else:
-                from .swin_transformer import swin_b, Swin_B_Weights
-                self.init_conv_mask = swin_b(weights=Swin_B_Weights)
-        else:
-            raise NotImplementedError
+        self.clip, _ = clip.load(cfg.cond_net, device='cpu')
         self.init_conv = nn.Sequential(
-            nn.Conv2d(input_channels + f_condnet, init_dim, 7, padding=3),
+            nn.Conv2d(input_channels, init_dim, 7, padding=3),
             nn.GroupNorm(num_groups=min(init_dim // 4, 8), num_channels=init_dim),
         )
 
@@ -667,16 +709,16 @@ class Unet(nn.Module):
         dims_rev = dims[::-1]
         in_out = list(zip(dims[:-1], dims[1:]))
         self.projects = nn.ModuleList()
-        if cfg.cond_net == 'effnet':
-            self.projects.append(nn.Conv2d(48, dims[0], 1))
-            self.projects.append(nn.Conv2d(80, dims[1], 1))
-            self.projects.append(nn.Conv2d(224, dims[2], 1))
-            self.projects.append(nn.Conv2d(640, dims[3], 1))
+        if cfg.cond_net == 'ViT-B/32':
+            self.projects.append(nn.Linear(512, dims[1]))
+            self.projects.append(nn.Linear(512, dims[2]))
+            self.projects.append(nn.Linear(512, dims[3]))
+            self.projects.append(nn.Linear(512, dims[4]))
+        elif cfg.cond_net == 'ViT-B/16':
+            # TODO: waiting for updating
+            pass
         else:
-            self.projects.append(nn.Conv2d(f_condnet, dims[0], 1))
-            self.projects.append(nn.Conv2d(f_condnet*2, dims[1], 1))
-            self.projects.append(nn.Conv2d(f_condnet*4, dims[2], 1))
-            self.projects.append(nn.Conv2d(f_condnet*8, dims[3], 1))
+            raise NotImplementedError
 
         block_klass = partial(ResnetBlock, groups = resnet_block_groups)
 
@@ -707,7 +749,6 @@ class Unet(nn.Module):
         self.ups = nn.ModuleList([])
         self.relation_layers_down = nn.ModuleList([])
         self.relation_layers_up = nn.ModuleList([])
-        self.relation_layers_up2 = nn.ModuleList([])
         num_resolutions = len(in_out)
 
         for ind, (dim_in, dim_out) in enumerate(in_out):
@@ -725,9 +766,8 @@ class Unet(nn.Module):
             #     Residual(PreNorm(dim_in, LinearAttention(dim_in))),
             #     Downsample(dim_in, dim_out) if not is_last else nn.Conv2d(dim_in, dim_out, 3, padding=1)
             # ]))
-            self.relation_layers_down.append(RelationNet(in_channel1=dims[ind], in_channel2=dims[ind], nhead=8,
-                                                  layers=1, embed_dim=dims[ind], ffn_dim=dims[ind]*2,
-                                                  window_size1=window_sizes1[ind], window_size2=window_sizes2[ind])
+            self.relation_layers_down.append(CondAttention(dim=dims[ind], dim2=dims[ind+1], hidden_dim=dims[ind], heads=8,
+                                                  window_size_q=window_sizes1[ind], window_size_k=window_sizes2[ind])
                                       )
 
         mid_dim = dims[-1]
@@ -748,11 +788,10 @@ class Unet(nn.Module):
                 Residual(PreNorm(dim_out, LinearAttention(dim_out))),
                 Upsample(dim_out, dim_in) if not is_last else nn.Conv2d(dim_out, dim_in, 3, padding = 1)
             ]))
-            self.relation_layers_up.append(RelationNet(in_channel1=dims_rev[ind+1], in_channel2=dims_rev[ind],
-                                                       nhead=8, layers=1, embed_dim=dims_rev[ind],
-                                                       ffn_dim=dims_rev[ind] * 2,
-                                                         window_size1=window_sizes1[::-1][ind],
-                                                         window_size2=window_sizes2[::-1][ind])
+            self.relation_layers_up.append(CondAttention(dim=dims_rev[ind], dim2=dims_rev[ind],
+                                                         hidden_dim=dims_rev[ind], heads=8,
+                                                         window_size_q=window_sizes1[::-1][ind],
+                                                         window_size_k=window_sizes2[::-1][ind])
                                            )
 
         default_out_dim = channels * (1 if not learned_variance else 2)
@@ -767,7 +806,7 @@ class Unet(nn.Module):
             self.init_from_ckpt(ckpt_path, ignore_keys=ignore_keys)
         fix_bb = cfg.get('fix_bb', False)
         if fix_bb:
-            for n, p in self.init_conv_mask.named_parameters():
+            for n, p in self.clip.named_parameters():
                 p.requires_grad = False
 
     def init_from_ckpt(self, path, ignore_keys=list()):
@@ -816,38 +855,34 @@ class Unet(nn.Module):
         x_clone = x.clone()
         x = c_in * x
         # mask = torch.cat([], dim=1)
-        hm = self.init_conv_mask(mask)
+        text_emb = self.clip.encode_text(mask)
         # if self.cond_pe:
         #     m = self.cond_pos_embedding(m)
-        x = self.init_conv(torch.cat([x, F.interpolate(hm[0], size=x.shape[-2:], mode="bilinear")], dim=1))
+        x = self.init_conv(x)
         r = x.clone()
 
         t_emb = self.time_mlp(c_noise)
 
         h = []
-        h2 = []
+        hm = []
         for i, layer in enumerate(self.projects):
-            hm[i] = layer(hm[i])
-        hm2 = []
-        for i in range(len(hm)):
-            hm2.append(hm[i].clone())
-        # hm = []
-        # hm2 = []
+            hm.append(layer(text_emb))
+
         for i, ((block1, block2, attn, downsample), relation_layer) \
                 in enumerate(zip(self.downs, self.relation_layers_down)):
             x = block1(x, t_emb)
             h.append(x)
-            h2.append(x.clone())
+            # h2.append(x.clone())
             # m = m_block(m, t)
             # hm.append(m)
             # hm2.append(m.clone())
 
-            x = relation_layer(hm[i], x)
+            x = relation_layer(x, hm[i])
 
             x = block2(x, t_emb)
             x = attn(x)
             h.append(x)
-            h2.append(x.clone())
+            # h2.append(x.clone())
 
             x = downsample(x)
             # m = m_downsample(m)
@@ -863,7 +898,7 @@ class Unet(nn.Module):
         for (block1, block2, attn, upsample), relation_layer in zip(self.ups, self.relation_layers_up):
             x = torch.cat((x, h.pop()), dim = 1)
             x = block1(x, t_emb)
-            x = relation_layer(hm.pop(), x)
+            x = relation_layer(x, hm.pop())
             x = torch.cat((x, h.pop()), dim = 1)
             x = block2(x, t_emb)
             x = attn(x)
@@ -891,14 +926,14 @@ if __name__ == "__main__":
                  cond_dim=128,
                  cond_dim_mults=(2, 4, ),
                  channels=1,
-                 window_sizes1=[[8, 8], [4, 4], [2, 2], [1, 1]],
-                 window_sizes2=[[8, 8], [4, 4], [2, 2], [1, 1]],
+                 window_sizes1=[[20, 20], [20, 20], [10, 10], [10, 10]],
+                 window_sizes2=[[20, 20], [20, 20], [10, 10], [10, 10]],
                  cfg=fvcore.common.config.CfgNode({'cond_pe': False,
-                      'cond_feature_size': (32, 128), 'cond_net': 'effnet',
+                      'cond_feature_size': (32, 128), 'cond_net': 'ViT-B/32',
                       'num_pos_feats': 96})
                  )
     x = torch.rand(1, 1, 80, 80)
-    mask = torch.rand(1, 3, 320, 320)
+    mask = torch.randint(49406, (1, 77))
     time = torch.tensor([0.5124])
     with torch.no_grad():
         y = model(x, time, mask)

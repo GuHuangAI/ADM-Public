@@ -6,9 +6,10 @@ import torchvision
 import torchvision.transforms as T
 import io
 
+
 def create_webdataset(
-    urls,
-    image_transform,
+    data_root,
+    image_size,
     enable_text=True,
     enable_image=True,
     image_key="jpg",
@@ -20,9 +21,16 @@ def create_webdataset(
     # import clip  # pylint: disable=import-outside-toplevel
     # import webdataset as wds  # pylint: disable=import-outside-toplevel
 
-
+    urls = os.listdir(data_root)
+    urls = [url for url in urls if url.endswith(".tar")]
+    urls = [os.path.join(data_root, url) for url in urls]
     dataset = wds.WebDataset(urls, cache_dir=cache_path, cache_size=10 ** 10, handler=wds.handlers.warn_and_continue)
     tokenizer = lambda text: clip.tokenize([text], truncate=True)[0]
+    image_transform = T.Compose([
+        T.Resize(image_size),
+        T.RandomHorizontalFlip(),
+        T.ToTensor()
+    ])
 
     def filter_dataset(item):
         if enable_text and caption_key not in item:
@@ -42,13 +50,13 @@ def create_webdataset(
             image = Image.open(io.BytesIO(image_data))
             image_tensor = image_transform(image)
             output["image_filename"] = item["__key__"]
-            output["image_tensor"] = image_tensor
+            output["image"] = image_tensor
 
         if enable_text:
             text = item[caption_key]
             caption = text.decode("utf-8")
             tokenized_text = tokenizer(caption)
-            output["text_tokens"] = tokenized_text
+            output["cond"] = tokenized_text
             output["text"] = caption
 
         if enable_metadata:
@@ -61,7 +69,7 @@ def create_webdataset(
     return transformed_dataset
 
 
-def dataset_to_dataloader(dataset, batch_size, num_prepro_workers, input_format):
+def dataset_to_dataloader(dataset, batch_size, num_prepro_workers, shuffle=True):
     """Create a pytorch dataloader from a dataset"""
 
     # def collate_fn(batch):
@@ -71,7 +79,7 @@ def dataset_to_dataloader(dataset, batch_size, num_prepro_workers, input_format)
     data = torch.utils.data.DataLoader(
         dataset,
         batch_size=batch_size,
-        shuffle=False,
+        shuffle=shuffle,
         num_workers=num_prepro_workers,
         pin_memory=True,
         prefetch_factor=2,
@@ -85,8 +93,8 @@ class WebdatasetReader:
 
     def __init__(
         self,
-        preprocess,
-        input_dataset,
+        data_root,
+        image_size,
         batch_size,
         num_prepro_workers,
         enable_text=True,
@@ -94,12 +102,12 @@ class WebdatasetReader:
         enable_metadata=False,
         wds_image_key="jpg",
         wds_caption_key="txt",
-        cache_path=None,
+        cache_path=None, **kwargs
     ):
         self.batch_size = batch_size
         dataset = create_webdataset(
-            input_dataset,
-            preprocess,
+            data_root,
+            image_size,
             enable_text=enable_text,
             enable_image=enable_image,
             image_key=wds_image_key,
@@ -107,7 +115,7 @@ class WebdatasetReader:
             enable_metadata=enable_metadata,
             cache_path=cache_path,
         )
-        self.dataloader = dataset_to_dataloader(dataset, batch_size, num_prepro_workers, "webdataset")
+        self.dataloader = dataset_to_dataloader(dataset, batch_size, num_prepro_workers)
 
     def __iter__(self):
         for batch in self.dataloader:
@@ -117,11 +125,12 @@ if __name__ == '__main__':
     import os
     # os.environ["CUDA_VISIBLE_DEVICES"] = ""
     tar_folder = "/home/huang/Downloads/mobaxterm/webdata"
-    input_dataset = [tar_folder + "/00000.tar", tar_folder + "/00807.tar"]
+    # input_dataset = [tar_folder + "/00807.tar", tar_folder + "/00000.tar", ]
+    input_dataset = [tar_folder + "/00807.tar"]
     batch_size = 2
     num_prepro_workers = 2
     device = torch.device('cpu')
-    model, _ = clip.load("ViT-B/32", device=device)
+    model, _ = clip.load("ViT-B/32", device='cpu')
 
     preprocess = torchvision.transforms.Compose([
         T.Resize((256, 256)),
@@ -130,15 +139,20 @@ if __name__ == '__main__':
 
     output_partition_count = 2
     actual_values = []
-    reader = WebdatasetReader(
-        preprocess,
-        input_dataset,
-        batch_size,
-        num_prepro_workers,
+    data_loader = WebdatasetReader(
+        data_root=tar_folder,
+        image_size=(224, 224),
+        batch_size=batch_size,
+        num_prepro_workers=num_prepro_workers,
         enable_text=True,
         enable_image=True,
         enable_metadata=True,
     )
 
-    for batch in reader:
-        break
+    for d in data_loader:
+        text_features = model.encode_text(d['cond'])
+        image_features = model.encode_image(d['image'])
+
+        logits_per_image, logits_per_text = model(d['image'], d['cond'])
+        probs = logits_per_image.softmax(dim=-1).detach().cpu().numpy()
+        continue

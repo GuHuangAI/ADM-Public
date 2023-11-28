@@ -55,9 +55,12 @@ def main(args):
     model_kwargs.pop('auto_encoder')
 
     data_cfg = cfg.data
-    dataset = construct_class_by_name(**data_cfg)
-    dl = DataLoader(dataset, batch_size=data_cfg.batch_size, shuffle=True, pin_memory=True,
-                    num_workers=data_cfg.get('num_workers', 2))
+    if data_cfg.get('data_type') == 'web':
+        dl = construct_class_by_name(**data_cfg)
+    else:
+        dataset = construct_class_by_name(**data_cfg)
+        dl = DataLoader(dataset, batch_size=data_cfg.batch_size, shuffle=True, pin_memory=True,
+                        num_workers=data_cfg.get('num_workers', 2))
     train_cfg = cfg.trainer
     trainer = Trainer(
         ldm, dl, train_batch_size=data_cfg.batch_size,
