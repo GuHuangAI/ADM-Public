@@ -142,6 +142,7 @@ pip install git+https://github.com/openai/CLIP.git
 ~~~
 accelerate launch train_cond_ldm.py --cfg ./configs/text2img/ddm_uncond_const.yaml
 ~~~
+Note that the pretrained weight of the AutoEncoder is downloaded from [here](https://ommer-lab.com/files/latent-diffusion/kl-f4.zip), and you should unzip the file.
 
 ## Concat
 If you have some questions, please concat with huangai@nudt.edu.cn.
