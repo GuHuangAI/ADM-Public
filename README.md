@@ -1,5 +1,5 @@
 # DDM
-## Decoupled Diffusion Models: Image to Zero and Zero to Noise ([arkiv](https://arxiv.org/abs/2306.13720))
+## Decoupled Diffusion Models: Image to Zero and Zero to Noise ([arxiv](https://arxiv.org/abs/2306.13720))
 ![Teaser](assets/figure1.png)
 
 ## Framework
