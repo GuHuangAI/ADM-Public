@@ -5,11 +5,13 @@ import torch
 import torchvision
 import torchvision.transforms as T
 import io
+import os
 
 
 def create_webdataset(
     data_root,
     image_size,
+    batch_size,
     enable_text=True,
     enable_image=True,
     image_key="jpg",
@@ -24,7 +26,13 @@ def create_webdataset(
     urls = os.listdir(data_root)
     urls = [url for url in urls if url.endswith(".tar")]
     urls = [os.path.join(data_root, url) for url in urls]
-    dataset = wds.WebDataset(urls, cache_dir=cache_path, cache_size=10 ** 10, handler=wds.handlers.warn_and_continue)
+    #dataset = wds.ShardList(urls, splitter=wds.split_by_worker, nodesplitter=wds.split_by_node, shuffle=False)
+    #dataset = wds.Processor(dataset, wds.url_opener)
+    #dataset = wds.Processor(dataset, wds.tar_file_expander)
+    #dataset = wds.Processor(dataset, wds.group_by_keys)
+    #dataset = wds.WebDataset(urls, cache_dir=cache_path, cache_size=10 ** 10, handler=wds.handlers.warn_and_continue)#.with_epoch(10000)
+    #dataset = wds.WebDataset(urls).decode("pil").batched(batch_size, partial=False)
+    dataset = wds.WebDataset(urls, resampled=True)
     tokenizer = lambda text: clip.tokenize([text], truncate=True)[0]
     image_transform = T.Compose([
         T.Resize(image_size),
@@ -50,7 +58,7 @@ def create_webdataset(
             image = Image.open(io.BytesIO(image_data))
             image_tensor = image_transform(image)
             output["image_filename"] = item["__key__"]
-            output["image"] = image_tensor
+            output["image"] = image_tensor * 2 - 1.
 
         if enable_text:
             text = item[caption_key]
@@ -65,11 +73,11 @@ def create_webdataset(
             output["metadata"] = metadata
         return output
 
-    transformed_dataset = filtered_dataset.map(preprocess_dataset, handler=wds.handlers.warn_and_continue)
+    transformed_dataset = filtered_dataset.map(preprocess_dataset, handler=wds.handlers.warn_and_continue).with_epoch(10000)
     return transformed_dataset
 
 
-def dataset_to_dataloader(dataset, batch_size, num_prepro_workers, shuffle=True):
+def dataset_to_dataloader(dataset, batch_size, num_prepro_workers, shuffle=False):
     """Create a pytorch dataloader from a dataset"""
 
     # def collate_fn(batch):
@@ -108,6 +116,7 @@ class WebdatasetReader:
         dataset = create_webdataset(
             data_root,
             image_size,
+            batch_size,
             enable_text=enable_text,
             enable_image=enable_image,
             image_key=wds_image_key,
@@ -116,6 +125,8 @@ class WebdatasetReader:
             cache_path=cache_path,
         )
         self.dataloader = dataset_to_dataloader(dataset, batch_size, num_prepro_workers)
+        #loader = wds.WebLoader(dataset, num_workers=num_prepro_workers)
+        #self.dataloader = loader.ddp_equalize(1000000 // batch_size)
 
     def __iter__(self):
         for batch in self.dataloader:

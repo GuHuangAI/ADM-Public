@@ -224,7 +224,7 @@ class Trainer(object):
                     batch = next(self.dl)
                     for key in batch.keys():
                         if isinstance(batch[key], torch.Tensor):
-                            batch[key].to(device)
+                            batch[key] = batch[key].to(device)
                     if self.step == 0 and ga_ind == 0:
                         if isinstance(self.model, nn.parallel.DistributedDataParallel):
                             self.model.module.on_train_batch_start(batch)

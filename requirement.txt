@@ -2,7 +2,7 @@
 accelerate==0.16.0
 einops
 ema-pytorch
-pytorch-lightning
+pytorch-lightning==1.9.3
 scikit-learn
 scipy
 thop
@@ -27,3 +27,4 @@ numpy==1.23.5
 transformers==4.6
 # clip; we find that the clip package installed via pip is invalid, please refer to [clip](https://github.com/openai/CLIP).
 kornia
+webdataset

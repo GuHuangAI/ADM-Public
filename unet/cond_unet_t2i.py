@@ -715,8 +715,10 @@ class Unet(nn.Module):
             self.projects.append(nn.Linear(512, dims[3]))
             self.projects.append(nn.Linear(512, dims[4]))
         elif cfg.cond_net == 'ViT-B/16':
-            # TODO: waiting for updating
-            pass
+            self.projects.append(nn.Linear(512, dims[1]))
+            self.projects.append(nn.Linear(512, dims[2]))
+            self.projects.append(nn.Linear(512, dims[3]))
+            self.projects.append(nn.Linear(512, dims[4]))
         else:
             raise NotImplementedError
 
