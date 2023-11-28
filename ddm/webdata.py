@@ -55,7 +55,7 @@ def create_webdataset(
         output = {}
         if enable_image:
             image_data = item[image_key]
-            image = Image.open(io.BytesIO(image_data))
+            image = Image.open(io.BytesIO(image_data)).convert("RGB")
             image_tensor = image_transform(image)
             output["image_filename"] = item["__key__"]
             output["image"] = image_tensor * 2 - 1.
