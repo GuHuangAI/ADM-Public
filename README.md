@@ -138,7 +138,7 @@ pip install git+https://github.com/openai/CLIP.git
 |   |-- 00001.tar
 |   |-- XXXXX.tar
 ```
-5. training with config file [text-2-img](configs/text2img/ddm_uncond_const.yaml). 
+5. training with config file [text-2-img](configs/text2img/ddm_const_text.yaml). 
 ~~~
 accelerate launch train_cond_ldm.py --cfg ./configs/text2img/ddm_uncond_const.yaml
 ~~~
