@@ -7,6 +7,21 @@ import torchvision.transforms as T
 import io
 import os
 
+class MyWebDataset(wds.WebDataset):
+    def __init__(
+            self,
+            urls, **kwargs
+    ):
+        super().__init__(urls, **kwargs)
+
+    def iterator(self):
+        """Create an iterator through the entire dataset, using the given number of repetitions."""
+        for i in range(self.repetitions):
+            for sample in self.iterator1():
+                if sample['image'].mean() <= -0.95:
+                    continue
+                else:
+                    yield sample
 
 def create_webdataset(
     data_root,
@@ -32,7 +47,8 @@ def create_webdataset(
     #dataset = wds.Processor(dataset, wds.group_by_keys)
     #dataset = wds.WebDataset(urls, cache_dir=cache_path, cache_size=10 ** 10, handler=wds.handlers.warn_and_continue)#.with_epoch(10000)
     #dataset = wds.WebDataset(urls).decode("pil").batched(batch_size, partial=False)
-    dataset = wds.WebDataset(urls, resampled=True)
+    # dataset = wds.WebDataset(urls, resampled=True)
+    dataset = MyWebDataset(urls, resampled=True)
     tokenizer = lambda text: clip.tokenize([text], truncate=True)[0]
     image_transform = T.Compose([
         T.Resize(image_size),
