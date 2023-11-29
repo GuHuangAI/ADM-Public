@@ -19,6 +19,7 @@ class MyWebDataset(wds.WebDataset):
         for i in range(self.repetitions):
             for sample in self.iterator1():
                 if sample['image'].mean() <= -0.95:
+                    print(sample['image_filename'])
                     continue
                 else:
                     yield sample
