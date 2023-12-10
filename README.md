@@ -6,6 +6,7 @@
 ![Framework](assets/framework.png)
 
 # News
+- The related paper for edge detection: [**DiffusionEdge**](https://github.com/GuHuangAI/DiffusionEdge) is accepted by AAAI-2024.
 - We now update training for text-2-img, please refer to [text-2-img](#viii-training-for-text-2-iamge).
 - We now modify the two-branch UNet, resulting a single-decoder UNet architecture.  
 You can use the single-decoder UNet in [uncond-unet-sd](unet/uncond_unet_sd.py) and [cond-unet-sd](unet/cond_unet_sd.py).
