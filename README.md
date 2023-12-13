@@ -6,7 +6,7 @@
 ![Framework](assets/framework.png)
 
 # News
-- The related paper for Multiple Object Tracking: [**DiffMOT**]() is released.
+- The related paper for Multiple Object Tracking: [**DiffMOT**](https://github.com/Kroery/DiffMOT) is released.
 - The related paper for edge detection: [**DiffusionEdge**](https://github.com/GuHuangAI/DiffusionEdge) is accepted by AAAI-2024.
 - We now update training for text-2-img, please refer to [text-2-img](#viii-training-for-text-2-iamge).
 - We now modify the two-branch UNet, resulting a single-decoder UNet architecture.  
