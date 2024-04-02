@@ -211,7 +211,7 @@ def calculate_metrics(**kwargs):
         first_stage_cfg = model_cfg.first_stage
         first_stage_model = construct_class_by_name(**first_stage_cfg)
         # model_cfg.auto_encoder = first_stage_model
-        unet_cfg = model_cfg.ncsnpp
+        unet_cfg = model_cfg.unet
         unet = construct_class_by_name(**unet_cfg)
         # model_cfg.model = unet
         model_kwargs = {'model': unet, 'auto_encoder': first_stage_model, 'cfg': model_cfg}

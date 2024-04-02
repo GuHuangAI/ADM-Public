@@ -147,13 +147,13 @@ class Trainer(object):
         # optimizer
         self.opt = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()),
                                      lr=train_lr, weight_decay=train_wd)
-        lr_lambda = lambda iter: max((1 - iter / train_num_steps) ** 0.96, cfg.trainer.min_lr)
+        lr_lambda = lambda iter: max((1 - iter / train_num_steps) ** 0.96, cfg.trainer.min_lr/train_lr)
         self.lr_scheduler = torch.optim.lr_scheduler.LambdaLR(self.opt, lr_lambda=lr_lambda)
         # for logging results in a folder periodically
         if self.accelerator.is_main_process:
             self.results_folder = Path(results_folder)
             self.results_folder.mkdir(exist_ok=True, parents=True)
-            self.ema = EMA(model, ema_model=None, beta=0.999,
+            self.ema = EMA(model, ema_model=None, beta=0.9996,
                            update_after_step=cfg.trainer.ema_update_after_step,
                            update_every=cfg.trainer.ema_update_every)
 

@@ -16,6 +16,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
 
+# This U-Net is used for ddm.ddm_const_2.py
+
 class SpatialAtt(nn.Module):
     def __init__(self, in_dim):
         super(SpatialAtt, self).__init__()
@@ -618,11 +620,11 @@ class EDMPrecond(torch.nn.Module):
         class_labels = None if self.label_dim == 0 else torch.zeros([1, self.label_dim], device=x.device) if class_labels is None else class_labels.to(torch.float32).reshape(-1, self.label_dim)
         dtype = torch.float32
 
-        c_skip1 = (sigma - 1) / (sigma ** 2 - sigma + 1)
-        c_skip2 = sigma.sqrt() / (sigma ** 2 - sigma + 1)
-        c_out1 = torch.sqrt(sigma / (sigma ** 2 - sigma + 1))
-        c_out2 = (1 - sigma) / (sigma ** 2 - sigma + 1).sqrt()
-        c_in = 1 / torch.sqrt((1 - sigma) ** 2 + sigma)
+        c_skip1 = (sigma - 1) / (sigma ** 2 + (sigma - 1) ** 2)
+        c_out1 = sigma / (sigma ** 2 + (sigma - 1) ** 2).sqrt()
+        c_skip2 = sigma / (sigma ** 2 + (sigma - 1) ** 2)
+        c_out2 = (1 - sigma) / (sigma ** 2 + (sigma - 1) ** 2).sqrt()
+        c_in = 1 / ((sigma - 1) ** 2 + sigma ** 2).sqrt()
         c_noise = sigma.log()
 
         F_x, F_y = self.model((c_in * x).to(dtype), c_noise.flatten(), class_labels=class_labels, **model_kwargs)

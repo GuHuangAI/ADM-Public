@@ -14,10 +14,9 @@ import random
 from taming.modules.losses.vqperceptual import *
 from .augment import AugmentPipe
 from .loss import *
-import numpy as np
 
-# xt = x0 + ct + \epsilon * t.sqrt()
 
+### xt = x0 + C*t + t*\epsilon
 def extract(a, t, x_shape):
     b, *_ = t.shape
     out = a.gather(-1, t)
@@ -54,7 +53,7 @@ class DDPM(nn.Module):
         clip_x_start=True,
         input_keys=['image'],
         start_dist='normal',
-        sample_type='deterministic',
+        sample_type='naive',
         perceptual_weight=1.,
         use_l1=False,
         **kwargs
@@ -76,7 +75,6 @@ class DDPM(nn.Module):
         self.register_buffer('eps', torch.tensor(cfg.get('eps', 1e-4) if cfg is not None else 1e-4))
         self.sigma_min = cfg.get('sigma_min', 1e-2) if cfg is not None else 1e-2
         self.sigma_max = cfg.get('sigma_max', 1) if cfg is not None else 1
-        print('### sigma_min: {}, sigma_max: {} ###\n'.format(self.sigma_min, self.sigma_max))
         self.weighting_loss = cfg.get("weighting_loss", False) if cfg is not None else False
         if self.weighting_loss:
             print('#### WEIGHTING LOSS ####')
@@ -86,7 +84,6 @@ class DDPM(nn.Module):
         self.objective = objective
         self.start_dist = start_dist
         assert start_dist in ['normal', 'uniform']
-        # self.sample_type = sample_type
 
         self.loss_type = loss_type
 
@@ -112,7 +109,7 @@ class DDPM(nn.Module):
 
         self.use_augment = self.cfg.get('use_augment', False)
         if self.use_augment:
-            self.augment = AugmentPipe(p=0.15, xflip=1e8, yflip=1, scale=1, rotate_frac=1,
+            self.augment = AugmentPipe(p=0.12, xflip=1e8, yflip=1, scale=1, rotate_frac=1,
                                        aniso=1, translate_frac=1)
             print('### use augment ###\n')
 
@@ -157,10 +154,10 @@ class DDPM(nn.Module):
             x = batch.values()
         return x
 
-    def training_step(self, batch, **kwargs):
+    def training_step(self, batch, *args, **kwargs):
         z, *_ = self.get_input(batch)
         cond = batch['cond'] if 'cond' in batch else None
-        loss, loss_dict = self(z, cond, **kwargs)
+        loss, loss_dict = self(z, cond)
         return loss, loss_dict
 
     def forward(self, x, *args, **kwargs):
@@ -169,34 +166,37 @@ class DDPM(nn.Module):
         # continuous time, t in [0, 1]
         eps = self.eps  # smallest time step
         t = torch.rand(x.shape[0], device=x.device) * (1. - eps) + eps
-        # t = torch.clamp(t, eps, 1.)
+        # t = torch.clamp(t, eps, 1)
         return self.p_losses(x, t, *args, **kwargs)
 
 
     def q_sample(self, x_start, noise, t, C):
         time = t.reshape(C.shape[0], *((1,) * (len(C.shape) - 1)))
-        x_noisy = x_start + C * time + torch.sqrt(time) * noise
+        x_noisy = x_start + C * time + time * noise
         return x_noisy
 
 
     def pred_x0_from_xt(self, xt, noise, C, t):
         time = t.reshape(C.shape[0], *((1,) * (len(C.shape) - 1)))
-        x0 = xt - C * time - torch.sqrt(time) * noise
+        x0 = xt - C * time - time * noise
         return x0
 
 
     def pred_xtms_from_xt(self, xt, noise, C, t, s):
+        # noise = noise / noise.std(dim=[1, 2, 3]).reshape(C.shape[0], *((1,) * (len(C.shape) - 1)))
         time = t.reshape(C.shape[0], *((1,) * (len(C.shape) - 1)))
         s = s.reshape(C.shape[0], *((1,) * (len(C.shape) - 1)))
-        mean = xt + C * (time-s) - C * time - s / torch.sqrt(time) * noise
-        epsilon = torch.randn_like(mean, device=xt.device)
-        sigma = torch.sqrt(s * (time-s) / time)
+        # mean = xt - C * s - (2*s*time - s**2) / time * noise
+        # mean = xt - C * s - s * s * time / (s ** 2 + (time - s) ** 2) * noise
+        mean = xt - C * s - (2*s*time - s**2) / time * noise
+        epsilon = torch.randn_like(mean, dtype=torch.float64, device=xt.device)
+        # sigma = (time-s) / time * torch.sqrt(2*s*time - s*s)
+        # sigma = s * (time - s) / torch.sqrt(s ** 2 + (time - s) ** 2)
+        sigma = torch.sqrt(2*s*time - s**2) * (time - s) / time
         xtms = mean + sigma * epsilon
         return xtms
 
     def p_losses(self, x_start, t, *args, **kwargs):
-        step = kwargs.get('step', 0)
-        ga_ind = kwargs.get("ga_ind", 0)
         if self.start_dist == 'normal':
             noise = torch.randn_like(x_start)
         elif self.start_dist == 'uniform':
@@ -214,8 +214,8 @@ class DDPM(nn.Module):
         C_pred, noise_pred = pred
         # C_pred = C_pred / torch.sqrt(t)
         # noise_pred = noise_pred / torch.sqrt(1 - t)
-        # x_rec = self.pred_x0_from_xt(x_noisy, noise_pred, C_pred, t)
-        x_rec = -1 * C_pred
+        x_rec = self.pred_x0_from_xt(x_noisy, noise_pred, C_pred, t)
+        # x_rec =
         loss_dict = {}
         prefix = 'train'
         target1 = C
@@ -225,9 +225,9 @@ class DDPM(nn.Module):
         loss_vlb = 0.
         # use l1 + l2
         if self.weighting_loss:
-            simple_weight1 = (t ** 2 - t + 1) / t
+            simple_weight1 = ((t - 1) / t) ** 2 + 1
             # simple_weight2 = (t ** 2 - t + 1) / (1 - t + self.eps) ** 2 # eps prevents div 0
-            simple_weight2 = (t ** 2 - t + 1) / (1 - t + self.eps)  # eps prevents div 0
+            simple_weight2 = (t / (1 - t + self.eps)) ** 2 + 1  # eps prevents div 0
         else:
             simple_weight1 = 1
             simple_weight2 = 1
@@ -239,11 +239,12 @@ class DDPM(nn.Module):
                            simple_weight2 * (noise_pred - target2).abs().mean([1, 2, 3])
             loss_simple = loss_simple / 2
         # rec_weight = 2 * (1 - t.reshape(C.shape[0], 1)) ** 2
-        # rec_weight = 1 - t.reshape(C.shape[0], 1) ** 2
         rec_weight = -torch.log(t.reshape(C.shape[0], 1)) / 2
         # loss_simple = loss_simple.sum() / C.shape[0]
 
-
+        # loss_consist = torch.abs(x_noisy - self.q_sample(x_start=x_start, noise=noise_pred, t=t, C=C_pred)).mean([1, 2, 3])
+        # loss_vlb += self.loss_vlb_func(x_rec, target3) * rec_weight ** 2
+        # loss_vlb += loss_consist
         if self.perceptual_weight > 0.:
             loss_vlb += self.perceptual_loss(x_rec, target3).sum([1, 2, 3]) * rec_weight
         # loss_vlb = loss_vlb.sum() / C.shape[0]
@@ -253,6 +254,7 @@ class DDPM(nn.Module):
         loss_dict.update(
             {f'{prefix}/loss_vlb': loss_vlb.detach().sum() / C.shape[0] / C.shape[1] / C.shape[2] / C.shape[3]})
         loss_dict.update({f'{prefix}/loss': loss.detach().sum() / C.shape[0] / C.shape[1] / C.shape[2] / C.shape[3]})
+
         return loss, loss_dict
 
     def get_loss(self, pred, target, mean=True):
@@ -288,12 +290,11 @@ class DDPM(nn.Module):
         batch, device, sampling_timesteps = shape[0], self.eps.device, self.sampling_timesteps
         rho = 1
         step_indices = torch.arange(sampling_timesteps, dtype=torch.float64, device=device)
-        t_steps = ((self.sigma_max ** 2) ** (1 / rho) + step_indices / (sampling_timesteps-1) * \
+        t_steps = ((self.sigma_max ** 2) ** (1 / rho) + step_indices / (sampling_timesteps - 1) * \
                    ((self.sigma_min ** 2) ** (1 / rho) - (self.sigma_max ** 2) ** (1 / rho))) ** rho
         # t_steps = t_steps * (1 / self.eps).round() * self.eps
         t_steps = torch.cat((t_steps, torch.tensor([0], device=device)), dim=0)
         time_steps = -torch.diff(t_steps)
-
         # step = 1. / self.sampling_timesteps
         # time_steps = torch.tensor([step], device=device).repeat(self.sampling_timesteps)
         # if denoise:
@@ -302,13 +303,13 @@ class DDPM(nn.Module):
         #                             torch.tensor([eps], device=device)), dim=0)
 
         if self.start_dist == 'normal':
-            img = torch.randn(shape, device=device)
+            img = torch.randn(shape, device=device, dtype=torch.float64)
         elif self.start_dist == 'uniform':
             img = 2 * torch.rand(shape, device=device) - 1.
         else:
             raise NotImplementedError(f'{self.start_dist} is not supported !')
-        # img = F.interpolate(img, scale_factor=up_scale, mode='bilinear', align_corners=True) * self.sigma_max
-        cur_time = torch.ones((batch,), dtype=torch.float64, device=device)
+        img = F.interpolate(img, scale_factor=up_scale, mode='bilinear', align_corners=True) * self.sigma_max
+        cur_time = torch.ones((batch,), device=device)
         for i, time_step in enumerate(time_steps):
             s = torch.full((batch,), time_step, device=device)
             if i == time_steps.shape[0] - 1:
@@ -337,20 +338,19 @@ class DDPM(nn.Module):
     @torch.no_grad()
     def sample_fn_d(self, shape, up_scale=1, unnormalize=True, cond=None, denoise=False):
         batch, device, sampling_timesteps = shape[0], self.eps.device, self.sampling_timesteps
-        rho = 1
         step = 1. / self.sampling_timesteps
-        sigma_min = self.sigma_min ** 2
-        # sigma_min = step
+        # step = self.sigma_min
+        rho = 1.
         step_indices = torch.arange(sampling_timesteps, dtype=torch.float64, device=device)
-        # t_steps = ((self.sigma_max ** 2) ** (1 / rho) + step_indices / (sampling_timesteps) * \
-        #            ((self.sigma_min ** 2) ** (1 / rho) - (self.sigma_max ** 2) ** (1 / rho))) ** rho
+        # t_steps = (self.sigma_max ** (1 / rho) + step_indices / (sampling_timesteps - 1) * (
+        #             self.sigma_min ** (1 / rho) - self.sigma_max ** (1 / rho))) ** rho
         t_steps = (self.sigma_max ** (1 / rho) + step_indices / (sampling_timesteps - 1) * (
-                sigma_min ** (1 / rho) - self.sigma_max ** (1 / rho))) ** rho
+                step - self.sigma_max ** (1 / rho))) ** rho
         t_steps = torch.cat([t_steps, torch.zeros_like(t_steps[:1])])
-        # time_steps = -torch.diff(t_steps)
         alpha = 1
 
         x_next = torch.randn(shape, device=device, dtype=torch.float64) * t_steps[0]
+        # img = F.interpolate(img, scale_factor=up_scale, mode='bilinear', align_corners=True)
         # cur_time = torch.ones((batch,), device=device)
         for i, (t_cur, t_next) in enumerate(zip(t_steps[:-1], t_steps[1:])):
             # t_cur = torch.full((batch,), t_c, device=device)
@@ -362,14 +362,12 @@ class DDPM(nn.Module):
                 pred = self.model(x_cur, t_cur)
             C, noise = pred[:2]
             C, noise = C.to(torch.float64), noise.to(torch.float64)
-            x0 = x_cur - C * t_cur - noise * t_cur.sqrt()
-            if self.clip_x_start:
-                x0.clamp_(-1. * self.scale_input, 1. * self.scale_input)
-            x_next = x0 + C * t_next + noise * t_next.sqrt()
-            # x_next = x0 + t_next * C + t_next.sqrt() * noise
-            # x0 = self.pred_x0_from_xt(x_cur, noise, C, t_cur)
-            # d_cur = C + noise / t_cur.sqrt()
-
+            x0 = x_cur - C * t_cur - noise * t_cur
+            # d_cur = (x_cur - x0) / t_cur
+            # x_next = x_cur + (t_next - t_cur) * d_cur
+            x_next = x0 + t_next * C + t_next * noise
+            # d_cur = C + noise
+            # x_next = x_cur + (t_next - t_cur) * d_cur
             # Apply 2-order correction.
             # if i < sampling_timesteps - 1:
             #     if cond is not None:
@@ -378,15 +376,17 @@ class DDPM(nn.Module):
             #         pred = self.model(x_next, t_next)
             #     C_, noise_ = pred[:2]
             #     C_, noise_ = C_.to(torch.float64), noise_.to(torch.float64)
-            #     d_next = C_ + noise_ / (t_next.sqrt() + t_next.sqrt())
-            #     x_next = x_cur + (t_next - t_cur) * (0.5 * d_cur + 0.5 * d_next)
+            #     d_next = C_ + noise_
+            #     x_next = x_cur + (t_next - t_cur) * 0.5 * (d_cur + d_next)
 
         x_next.clamp_(-1. * self.scale_input, 1. * self.scale_input)
         if self.scale_input != 1:
-            x_next = x_next / self.scale_input
+            img = x_next / self.scale_input
+        else:
+            img = x_next
         if unnormalize:
-            x_next = unnormalize_to_zero_to_one(x_next)
-        return x_next
+            img = unnormalize_to_zero_to_one(img)
+        return img
 
 
 
@@ -397,7 +397,7 @@ class LatentDiffusion(DDPM):
                  scale_by_std=True,
                  scale_by_softsign=False,
                  input_keys=['image'],
-                 sample_type='deterministic',
+                 sample_type='naive',
                  default_scale=False,
                  *args,
                  **kwargs
@@ -423,6 +423,7 @@ class LatentDiffusion(DDPM):
         # self.instantiate_cond_stage(cond_stage_config)
         self.input_keys = input_keys
         self.clip_denoised = False
+        assert sample_type in ['naive', 'ddim', 'dpm', ] ###  'dpm' is not availible now, suggestion 'ddim'
         # self.sample_type = sample_type
 
         if self.cfg.get('use_disloss', False):
@@ -509,7 +510,7 @@ class LatentDiffusion(DDPM):
             out.append(cond)
         return out
 
-    def training_step(self, batch, **kwargs):
+    def training_step(self, batch):
         z, c, x, *_ = self.get_input(batch)
         if self.scale_by_softsign:
             z = F.softsign(z)
@@ -517,9 +518,9 @@ class LatentDiffusion(DDPM):
             z = self.scale_factor * z
         # print('grad', self.scale_bias.grad)
         if self.cfg.get('use_disloss', False):
-            loss, loss_dict = self(z, c, ori_input=x, **kwargs)
+            loss, loss_dict = self(z, c, ori_input=x)
         else:
-            loss, loss_dict = self(z, c, **kwargs)
+            loss, loss_dict = self(z, c)
         return loss, loss_dict
 
 
@@ -548,12 +549,13 @@ class LatentDiffusion(DDPM):
         loss_vlb = 0.
         # use l1 + l2
         if self.weighting_loss:
-            simple_weight1 = (t ** 2 - t + 1) / t
+            simple_weight1 = ((t - 1) / t) ** 2 + 1
             # simple_weight2 = (t ** 2 - t + 1) / (1 - t + self.eps) ** 2 # eps prevents div 0
-            simple_weight2 = (t ** 2 - t + 1) / (1 - t + self.eps)  # eps prevents div 0
+            simple_weight2 = (t / (1 - t + self.eps)) ** 2 + 1  # eps prevents div 0
         else:
             simple_weight1 = 1
             simple_weight2 = 1
+
         loss_simple += simple_weight1 * self.loss_main_func(C_pred, target1, reduction='sum') + \
                        simple_weight2 * self.loss_main_func(noise_pred, target2, reduction='sum')
         if self.use_l1:
@@ -564,6 +566,7 @@ class LatentDiffusion(DDPM):
         rec_weight = -torch.log(t.reshape(C.shape[0], 1)) / 2
         # rec_weight = 2 * (1 - t.reshape(C.shape[0], 1)) ** 2
         loss_vlb += (x_rec - target3).abs().sum([1, 2, 3]) * rec_weight
+
         if self.cfg.get('use_disloss', False):
             with torch.no_grad():
                 img_rec = self.first_stage_model.decode(x_rec / self.scale_factor)
@@ -572,7 +575,7 @@ class LatentDiffusion(DDPM):
             if self.perceptual_weight > 0.:
                 loss_tmp += self.perceptual_loss(img_rec, kwargs['ori_input']).sum([1, 2, 3]) * rec_weight
             loss_distill = SpecifyGradient.apply(x_rec, loss_tmp.mean())
-            loss_vlb += loss_distill  # .mean()
+            loss_vlb += loss_distill#.mean()
 
         loss += loss_vlb.sum() / C.shape[0]
         # loss = loss_simple.sum() / C.shape[0] + loss_vlb.sum() / C.shape[0]
@@ -607,11 +610,11 @@ class LatentDiffusion(DDPM):
         down_ratio = self.first_stage_model.down_ratio
         self.sample_type = self.cfg.get('sample_type', 'deterministic')
         if self.sample_type == 'deterministic':
-            z = self.sample_fn_d((batch_size, channels, image_size[0]//down_ratio, image_size[1]//down_ratio),
-                           up_scale=up_scale, unnormalize=False, cond=cond, denoise=denoise)
+            z = self.sample_fn_d((batch_size, channels, image_size[0] // down_ratio, image_size[1] // down_ratio),
+                               up_scale=up_scale, unnormalize=False, cond=cond, denoise=denoise)
         elif self.sample_type == 'stochastic':
-            z = self.sample_fn_s((batch_size, channels, image_size[0]//down_ratio, image_size[1]//down_ratio),
-                           up_scale=up_scale, unnormalize=False, cond=cond, denoise=denoise)
+            z = self.sample_fn_s((batch_size, channels, image_size[0] // down_ratio, image_size[1] // down_ratio),
+                               up_scale=up_scale, unnormalize=False, cond=cond, denoise=denoise)
 
         if self.scale_by_std:
             z = 1. / self.scale_factor * z.detach()
@@ -629,22 +632,18 @@ class LatentDiffusion(DDPM):
     @torch.no_grad()
     def sample_fn_s(self, shape, up_scale=1, unnormalize=True, cond=None, denoise=False):
         batch, device, sampling_timesteps = shape[0], self.eps.device, self.sampling_timesteps
-        rho = 1
-        step = 1. / self.sampling_timesteps
-        sigma_min = self.sigma_min ** 2
-        step_indices = torch.arange(sampling_timesteps, dtype=torch.float64, device=device)
+        # rho = 1.
+        # step_indices = torch.arange(sampling_timesteps, dtype=torch.float32, device=device)
         # t_steps = ((self.sigma_max ** 2) ** (1 / rho) + step_indices / (sampling_timesteps) * \
         #            ((self.sigma_min ** 2) ** (1 / rho) - (self.sigma_max ** 2) ** (1 / rho))) ** rho
-        t_steps = (self.sigma_max ** (1 / rho) + step_indices / (sampling_timesteps - 1) * (
-                sigma_min ** (1 / rho) - self.sigma_max ** (1 / rho))) ** rho
-        t_steps = torch.cat([t_steps, torch.zeros_like(t_steps[:1])])
-        time_steps = -torch.diff(t_steps)
-        # step = 1. / self.sampling_timesteps
-        # time_steps = torch.tensor([step], device=device).repeat(self.sampling_timesteps)
-        # if denoise:
-        #     eps = self.eps
-        #     time_steps = torch.cat((time_steps[:-1], torch.tensor([time_steps[-1] - eps], device=device), \
-        #                             torch.tensor([eps], device=device)), dim=0)
+        # t_steps = torch.cat((t_steps, torch.tensor([0], device=device)), dim=0)
+        # time_steps = -torch.diff(t_steps)
+        step = 1. / self.sampling_timesteps
+        time_steps = torch.tensor([step], dtype=torch.float32, device=device).repeat(self.sampling_timesteps)
+        if denoise:
+            eps = self.eps
+            time_steps = torch.cat((time_steps[:-1], torch.tensor([time_steps[-1] - eps], device=device), \
+                                    torch.tensor([eps], device=device)), dim=0)
 
         if self.start_dist == 'normal':
             img = torch.randn(shape, device=device)
@@ -686,8 +685,6 @@ class LatentDiffusion(DDPM):
     def sample_fn_d(self, shape, up_scale=1, unnormalize=True, cond=None, denoise=False):
         batch, device, sampling_timesteps = shape[0], self.eps.device, self.sampling_timesteps
         step = 1. / self.sampling_timesteps
-        sigma_min = self.sigma_min ** 2
-        # sigma_min = step
         rho = 1.
         step_indices = torch.arange(sampling_timesteps, dtype=torch.float64, device=device)
         # t_steps = ((self.sigma_max ** 2) ** (1 / rho) + step_indices / (sampling_timesteps) * \
@@ -695,7 +692,7 @@ class LatentDiffusion(DDPM):
         # t_steps = (self.sigma_max ** (1 / rho) + step_indices / (sampling_timesteps - 1) * (
         #             self.sigma_min ** (1 / rho) - self.sigma_max ** (1 / rho))) ** rho
         t_steps = (self.sigma_max ** (1 / rho) + step_indices / (sampling_timesteps - 1) * (
-                sigma_min - self.sigma_max ** (1 / rho))) ** rho
+                step - self.sigma_max ** (1 / rho))) ** rho
         t_steps = torch.cat([t_steps, torch.zeros_like(t_steps[:1])])
         # time_steps = -torch.diff(t_steps)
         alpha = 1
@@ -718,13 +715,12 @@ class LatentDiffusion(DDPM):
                 pred = self.model(x_cur, t_cur)
             C, noise = pred[:2]
             C, noise = C.to(torch.float64), noise.to(torch.float64)
-            # x0 = x_cur - C * t_cur - noise * t_cur.sqrt()
-            d_cur = C + noise / (t_cur.sqrt() + t_next.sqrt())
-            x_next = x_cur + (t_next - t_cur) * d_cur
-            # x_next = x0 + t_next * C + t_next.sqrt() * noise
-            # x0 = self.pred_x0_from_xt(x_cur, noise, C, t_cur)
-            # d_cur = C + noise / t_cur.sqrt()
-
+            x0 = x_cur - C * t_cur - noise * t_cur
+            # d_cur = (x_cur - x0) / t_cur
+            # x_next = x_cur + (t_next - t_cur) * d_cur
+            x_next = x0 + t_next * C + t_next * noise
+            # d_cur = C + noise
+            # x_next = x_cur + (t_next - t_cur) * d_cur
             # Apply 2-order correction.
             # if i < sampling_timesteps - 1:
             #     if cond is not None:
@@ -733,8 +729,8 @@ class LatentDiffusion(DDPM):
             #         pred = self.model(x_next, t_next)
             #     C_, noise_ = pred[:2]
             #     C_, noise_ = C_.to(torch.float64), noise_.to(torch.float64)
-            #     d_next = C_ + noise_ / (t_next.sqrt() + t_next.sqrt())
-            #     x_next = x_cur + (t_next - t_cur) * (0.5 * d_cur + 0.5 * d_next)
+            #     d_next = C_ + noise_
+            #     x_next = x_cur + (t_next - t_cur) * 0.5 * (d_cur + d_next)
         img = x_next
         if unnormalize:
             img = unnormalize_to_zero_to_one(img)

@@ -15,6 +15,7 @@ from torch.nn.functional import silu
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange
+# This U-Net is used for ddm.ddm_const_2.py
 
 class SpatialAtt(nn.Module):
     def __init__(self, in_dim):
@@ -501,12 +502,7 @@ class DhariwalUNet(torch.nn.Module):
             nn.Conv2d(cout, cout, 3, 1, 1),
             SpatialAtt(cout)
         )
-        self.decouple2 = nn.Sequential(
-            nn.Conv2d(cout, cout, 3, 1, 1),
-            SpatialAtt(cout)
-        )
         cout1 = cout
-        cout2 = cout
         # Decoder.
         self.dec = torch.nn.ModuleDict()
         for level, mult in reversed(list(enumerate(channel_mult))):
@@ -523,23 +519,6 @@ class DhariwalUNet(torch.nn.Module):
         self.out_norm = GroupNorm(num_channels=cout1)
         self.out_conv = Conv2d(in_channels=cout1, out_channels=out_channels*out_mul, kernel=3, **init_one)
 
-        # Decoder2.
-        self.dec2 = torch.nn.ModuleDict()
-        for level, mult in reversed(list(enumerate(channel_mult))):
-            res = img_resolution >> level
-            if level == len(channel_mult) - 1:
-                self.dec2[f'{res}x{res}_in0'] = UNetBlock(in_channels=cout2, out_channels=cout2, attention=True,
-                                                         **block_kwargs)
-                self.dec2[f'{res}x{res}_in1'] = UNetBlock(in_channels=cout2, out_channels=cout2, **block_kwargs)
-            else:
-                self.dec2[f'{res}x{res}_up'] = UNetBlock(in_channels=cout2, out_channels=cout2, up=True, **block_kwargs)
-            for idx in range(num_blocks + 1):
-                cin = cout2 + skips2.pop()
-                cout2 = model_channels * mult
-                self.dec2[f'{res}x{res}_block{idx}'] = UNetBlock(in_channels=cin, out_channels=cout2,
-                                                                attention=(res in attn_resolutions), **block_kwargs)
-        self.out_norm2 = GroupNorm(num_channels=cout2)
-        self.out_conv2 = Conv2d(in_channels=cout2, out_channels=out_channels, kernel=3, **init_one)
 
     def forward(self, x, noise_labels, class_labels, augment_labels=None, **kwargs):
         # Mapping.
@@ -564,21 +543,13 @@ class DhariwalUNet(torch.nn.Module):
             skips2.append(x.clone())
 
         x1 = self.decouple1(x) + x
-        x2 = self.decouple2(x) + x
         # Decoder.
         for block in self.dec.values():
             if x1.shape[1] != block.in_channels:
                 x1 = torch.cat([x1, skips.pop()], dim=1)
             x1 = block(x1, emb)
         x1 = self.out_conv(silu(self.out_norm(x1)))
-
-        # Decoder2.
-        for block in self.dec2.values():
-            if x2.shape[1] != block.in_channels:
-                x2 = torch.cat([x2, skips2.pop()], dim=1)
-            x2 = block(x2, emb)
-        x2 = self.out_conv2(silu(self.out_norm2(x2)))
-        return x1, x2
+        return x1
 
 #----------------------------------------------------------------------------
 # Improved preconditioning proposed in the paper "Elucidating the Design
@@ -618,20 +589,21 @@ class EDMPrecond(torch.nn.Module):
         class_labels = None if self.label_dim == 0 else torch.zeros([1, self.label_dim], device=x.device) if class_labels is None else class_labels.to(torch.float32).reshape(-1, self.label_dim)
         dtype = torch.float32
 
-        c_skip1 = (sigma - 1) / (sigma ** 2 - sigma + 1)
-        c_skip2 = sigma.sqrt() / (sigma ** 2 - sigma + 1)
-        c_out1 = torch.sqrt(sigma / (sigma ** 2 - sigma + 1))
-        c_out2 = (1 - sigma) / (sigma ** 2 - sigma + 1).sqrt()
-        c_in = 1 / torch.sqrt((1 - sigma) ** 2 + sigma)
+        c_skip1 = (sigma - 1) / (sigma ** 2 + (sigma - 1) ** 2)
+        c_out1 = sigma / (sigma ** 2 + (sigma - 1) ** 2).sqrt()
+        c_skip2 = sigma / (sigma ** 2 + (sigma - 1) ** 2)
+        c_out2 = (1 - sigma) / (sigma ** 2 + (sigma - 1) ** 2).sqrt()
+        c_in = 1 / ((sigma - 1) ** 2 + sigma ** 2).sqrt()
         c_noise = sigma.log()
 
-        F_x, F_y = self.model((c_in * x).to(dtype), c_noise.flatten(), class_labels=class_labels, **model_kwargs)
+        F_x = self.model((c_in * x).to(dtype), c_noise.flatten(), class_labels=class_labels, **model_kwargs)
         # assert F_x.dtype == dtype
         if self.precondition:
             D_x = c_skip1 * x + c_out1 * F_x
-            D_y = c_skip2 * x + c_out2 * F_y
+            D_y = (x - (sigma - 1) * D_x) / sigma
         else:
-            D_x, D_y = F_x, F_y
+            D_x = F_x
+            D_y = (x - (sigma - 1) * D_x) / sigma
         return D_x, D_y
 
     def round_sigma(self, sigma):

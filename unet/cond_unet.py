@@ -818,6 +818,8 @@ class Unet(nn.Module):
                 nn.init.constant_(m.bias, 0.)
 
     def forward(self, x, time, mask, x_self_cond = None, sigma_max=1, *args, **kwargs):
+        x = x.to(torch.float32)
+        time = time.to(torch.float32)
         if self.self_condition:
             x_self_cond = default(x_self_cond, lambda: torch.zeros_like(x))
             x = torch.cat((x_self_cond, x), dim = 1)

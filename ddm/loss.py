@@ -297,12 +297,17 @@ class MSE_Loss(nn.Module):
         self.mask = mask
         self.with_sigmoid = with_sigmoid
 
-    def forward(self, pred, gt, reduce_dims=[1, 2, 3], mask=None):
+    def forward(self, pred, gt, reduce_dims=[1, 2, 3], mask=None, reduction='mean'):
         if self.with_sigmoid:
             pred, gt = torch.sigmoid(pred), torch.sigmoid(gt)
         B = pred.shape[0]
         if not self.mask:
-            loss = F.mse_loss(pred, gt, reduction='none').mean(dim=reduce_dims)
+            if reduction == 'mean':
+                loss = F.mse_loss(pred, gt, reduction='none').mean(dim=reduce_dims)
+            elif reduction == 'sum':
+                loss = F.mse_loss(pred, gt, reduction='none').sum(dim=reduce_dims)
+            else:
+                raise NotImplementedError("")
         else:
             loss = []
             mask = (gt > self.thresh_min) & (gt < self.thresh_max)  # [b, c, h, w]
@@ -319,7 +324,7 @@ class MSE_Loss(nn.Module):
                     mask_i = mask_maskbatch[i, ...]
                     pred_depth_i = pred_maskbatch[i, ...][mask_i]
                     gt_depth_i = gt_maskbatch[i, ...][mask_i]
-                    loss.append(F.mse_loss(pred_depth_i, gt_depth_i))
+                    loss.append(F.mse_loss(pred_depth_i, gt_depth_i, reduction=reduction))
                 except:
                     loss.append(torch.tensor(0.0, dtype=torch.float32, device=pred.device))
             loss = torch.stack(loss, dim=0)
@@ -333,12 +338,17 @@ class MAE_Loss(nn.Module):
         self.mask = mask
         self.with_sigmoid = with_sigmoid
 
-    def forward(self, pred, gt, reduce_dims=[1, 2, 3], mask_gt=None):
+    def forward(self, pred, gt, reduce_dims=[1, 2, 3], mask_gt=None, reduction='mean'):
         if self.with_sigmoid:
             pred, gt = torch.sigmoid(pred), torch.sigmoid(gt)
         B = pred.shape[0]
         if not self.mask:
-            loss = torch.abs(pred - gt).mean(dim=reduce_dims)
+            if reduction == 'mean':
+                loss = torch.abs(pred - gt).mean(dim=reduce_dims)
+            elif reduction == 'sum':
+                loss = torch.abs(pred - gt).sum(dim=reduce_dims)
+            else:
+                raise NotImplementedError
         else:
             loss = []
             if mask_gt is not None:
@@ -358,7 +368,12 @@ class MAE_Loss(nn.Module):
                     mask_i = mask_maskbatch[i, ...]
                     pred_depth_i = pred_maskbatch[i, ...][mask_i]
                     gt_depth_i = gt_maskbatch[i, ...][mask_i]
-                    loss.append(torch.abs(pred_depth_i - gt_depth_i).mean())
+                    if reduction == 'mean':
+                        loss.append(torch.abs(pred_depth_i - gt_depth_i).mean(dim=reduce_dims))
+                    elif reduction == 'sum':
+                        loss.append(torch.abs(pred_depth_i - gt_depth_i).sum(dim=reduce_dims))
+                    else:
+                        raise NotImplementedError
                 except:
                     loss.append(torch.tensor(0.0, dtype=torch.float32, device=pred.device))
             loss = torch.stack(loss, dim=0)
