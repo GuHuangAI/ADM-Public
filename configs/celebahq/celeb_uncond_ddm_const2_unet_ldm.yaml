@@ -12,9 +12,9 @@ model:
   scale_by_std: True
   default_scale: True
   scale_by_softsign: False
-  eps: !!float 1e-4
+  eps: !!float 1e-3
   sigma_max: 1
-  sigma_min: 0.01
+  sigma_min: 0.001
   ldm: True
   weighting_loss: False
   use_disloss: False
