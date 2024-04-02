@@ -16,7 +16,7 @@ model:
   sigma_max: 1
   sigma_min: 0.001
   ldm: True
-  weighting_loss: False
+  weighting_loss: True
   use_disloss: False
   use_l1: False
   use_augment: False
