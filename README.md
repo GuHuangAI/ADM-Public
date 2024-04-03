@@ -1,11 +1,12 @@
 # DDM
-## Decoupled Diffusion Models: Image to Zero and Zero to Noise ([arxiv](https://arxiv.org/abs/2306.13720))
+## Decoupled Diffusion Models: Simultaneous Image to Zero and Zero to Noise ([arxiv](https://arxiv.org/abs/2306.13720))
 ![Teaser](assets/figure1.png)
 
 ## Framework
 ![Framework](assets/framework.png)
 
 # News
+- Update [ddm_const_2](ddm/ddm_const_2.py), replacing the noise scheduler \sqrt(t) with t. 
 - 2024-02-27: This work inspired the paper for Multiple Object Tracking: [**DiffMOT**](https://github.com/Kroery/DiffMOT), which is accepted by CVPR-2024.
 - 2023-12-09: This work inspired the paper for edge detection: [**DiffusionEdge**](https://github.com/GuHuangAI/DiffusionEdge), which is accepted by AAAI-2024.
 - We now update training for text-2-img, please refer to [text-2-img](#viii-training-for-text-2-iamge).
