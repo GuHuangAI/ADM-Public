@@ -154,7 +154,7 @@ Note that the pretrained weight of the AutoEncoder is downloaded from [here](htt
 | Uncond-Celeb | [url](https://pan.baidu.com/s/1jhHZJTUzH_eH9xM6s9_6dQ?pwd=iewg) | [url](configs/celebahq/celeb_uncond_ddm_const2_unet_ldm.yaml) |
 
 
-## Concat
+## Contact
 If you have some questions, please concat with huangai@nudt.edu.cn.
 ## Thanks
 Thanks to the public repos: [DDPM](https://github.com/lucidrains/denoising-diffusion-pytorch) and [LDM](https://github.com/CompVis/latent-diffusion) for providing the base code.

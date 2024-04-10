@@ -62,7 +62,7 @@ trainer:
   resume_milestone: 0
   test_before: True
   ema_update_after_step: 10000
-  ema_update_every: 1
+  ema_update_every: 4
 
 sampler:
   batch_size: 128
