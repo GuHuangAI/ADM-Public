@@ -70,7 +70,7 @@ def main(args):
         save_and_sample_every=train_cfg.save_and_sample_every, results_folder=train_cfg.results_folder,
         amp=train_cfg.amp, fp16=train_cfg.fp16, log_freq=train_cfg.log_freq, cfg=cfg,
         resume_milestone=train_cfg.resume_milestone,
-        train_wd=train_cfg.get('weight_decay', 1e-2),
+        train_wd=train_cfg.get('weight_decay', 1e-4),
     )
     if train_cfg.test_before:
         if trainer.accelerator.is_main_process:
