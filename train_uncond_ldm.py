@@ -141,12 +141,20 @@ class Trainer(object):
 
         dl = self.accelerator.prepare(data_loader)
         self.dl = cycle(dl)
-
+        def WarmUpLrScheduler(iter):
+            warmup_iter = cfg.trainer.get('warmup_iter', 5000)
+            if iter <= warmup_iter:
+                ratio = (iter + 1) / warmup_iter
+            else:
+                ratio = max((1 - (iter - warmup_iter) / train_num_steps) ** 0.96,
+                            cfg.trainer.min_lr / train_lr)
+                # ratio = 1
+            return ratio
         # optimizer
         self.opt = torch.optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()),
                                      lr=train_lr, weight_decay=train_wd)
-        lr_lambda = lambda iter: max((1 - iter / train_num_steps) ** 0.96, cfg.trainer.min_lr/train_lr)
-        self.lr_scheduler = torch.optim.lr_scheduler.LambdaLR(self.opt, lr_lambda=lr_lambda)
+        # lr_lambda = lambda iter: max((1 - iter / train_num_steps) ** 0.96, cfg.trainer.min_lr/train_lr)
+        self.lr_scheduler = torch.optim.lr_scheduler.LambdaLR(self.opt, lr_lambda=WarmUpLrScheduler)
         # for logging results in a folder periodically
         if self.accelerator.is_main_process:
             self.results_folder = Path(results_folder)
