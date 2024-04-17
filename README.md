@@ -150,7 +150,7 @@ Note that the pretrained weight of the AutoEncoder is downloaded from [here](htt
 ## Pretrained Weight
 | Task           | Weight                                                          | Config                                                        |
 |----------------|-----------------------------------------------------------------|---------------------------------------------------------------|
- | Uncond-Cifar10 | [url](https://pan.baidu.com/s/1o8kGTCg14lAT7-_4ZiVv_A?pwd=k2vj) | [url](configs/cifar10/ddm_uncond_const2_unet.yaml)            |
+ | Uncond-Cifar10 | [url](https://pan.baidu.com/s/1E1G4JrHN6NpQM0yF5BcjAw?pwd=l29g) | [url](configs/cifar10/ddm_uncond_const2_unet.yaml)            |
 | Uncond-Celeb   | [url](https://pan.baidu.com/s/1jhHZJTUzH_eH9xM6s9_6dQ?pwd=iewg) | [url](configs/celebahq/celeb_uncond_ddm_const2_unet_ldm.yaml) |
 
 
