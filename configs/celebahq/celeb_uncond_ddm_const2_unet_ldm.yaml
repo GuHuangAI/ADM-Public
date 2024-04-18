@@ -50,7 +50,7 @@ model:
     channel_mult_emb: 4  # Multiplier for the dimensionality of the embedding vector.
     num_blocks: 3  # Number of residual blocks per resolution.
     attn_resolutions: [ 16, 8 ]  # List of resolutions with self-attention.
-    dropout: 0.1  # dropout.
+    dropout: 0.  # dropout.
     label_dropout: 0
     augment_dim: 0
 
