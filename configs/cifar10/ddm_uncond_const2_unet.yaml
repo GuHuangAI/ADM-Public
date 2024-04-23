@@ -52,7 +52,7 @@ eval:
 trainer:
   gradient_accumulate_every: 2
   lr: !!float 1e-4
-  min_lr: !!float 1e-5
+  min_lr: !!float 5e-5
   train_num_steps: 800000
   save_and_sample_every: 10000
   log_freq: 500

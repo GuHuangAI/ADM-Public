@@ -622,7 +622,7 @@ class LatentDiffusion(DDPM):
             z = z / (1 - z.abs())
             z = z.detach()
         #print(z.shape)
-        x_rec = self.first_stage_model.decode(z)
+        x_rec = self.first_stage_model.decode(z.to(torch.float32))
         x_rec = unnormalize_to_zero_to_one(x_rec)
         x_rec = torch.clamp(x_rec, min=0., max=1.)
         if mask is not None:
