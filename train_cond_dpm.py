@@ -104,13 +104,13 @@ def main(args):
                     break
                 if isinstance(trainer.model, nn.parallel.DistributedDataParallel):
                     all_images = trainer.model.module.sample(batch_size=datatmp['cond'].shape[0],
-                                                             cond=datatmp['cond'].to(trainer.model.device),
+                                                             cond=datatmp['cond'].to(trainer.accelerator.device),
                                                              #mask=datatmp['ori_mask'].to(
                                                              #    trainer.model.device) if 'ori_mask' in datatmp else None
                                                              )
                 elif isinstance(trainer.model, nn.Module):
                     all_images = trainer.model.sample(batch_size=datatmp['cond'].shape[0],
-                                                      cond=datatmp['cond'].to(trainer.model.device),
+                                                      cond=datatmp['cond'].to(trainer.accelerator.device),
                                                       #mask=datatmp['ori_mask'].to(
                                                       #    trainer.model.device) if 'ori_mask' in datatmp else None
                                                       )
