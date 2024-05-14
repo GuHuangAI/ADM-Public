@@ -854,7 +854,7 @@ class Unet(nn.Module):
         c_in = 1
         c_noise = time.log()
 
-        x_clone = x.clone()
+        x_clone = x.reshape(-1, 1).clone()
         x = c_in * x
         # mask = torch.cat([], dim=1)
         text_emb = self.clip.encode_text(mask)

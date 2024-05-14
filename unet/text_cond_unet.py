@@ -830,7 +830,7 @@ class Unet(nn.Module):
         c_out1 = t / (t + 1).sqrt()
         c_out2 = torch.sqrt(1 - t) / (1 + t).sqrt()
         c_in = 1
-        c_noise = time.log() / 2
+        c_noise = time.reshape(-1, 1).log()
 
         x_clone = x.clone()
         x = c_in * x
