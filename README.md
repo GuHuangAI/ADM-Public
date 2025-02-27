@@ -147,11 +147,14 @@ accelerate launch train_cond_ldm.py --cfg ./configs/text2img/ddm_uncond_const.ya
 ~~~
 Note that the pretrained weight of the AutoEncoder is downloaded from [here](https://ommer-lab.com/files/latent-diffusion/kl-f4.zip), and you should unzip the file.
 
-## Pretrained Weight
+## Pretrained Weight (the weights are not correct, please wait for updates.)
 | Task           | Weight                                                          | Config                                                        |
 |----------------|-----------------------------------------------------------------|---------------------------------------------------------------|
- | Uncond-Cifar10 | [url](https://pan.baidu.com/s/1E1G4JrHN6NpQM0yF5BcjAw?pwd=l29g) | [url](configs/cifar10/ddm_uncond_const2_unet.yaml)            |
-| Uncond-Celeb   | [url](https://pan.baidu.com/s/1jhHZJTUzH_eH9xM6s9_6dQ?pwd=iewg) | [url](configs/celebahq/celeb_uncond_ddm_const2_unet_ldm.yaml) |
+
+[//]: # ( | Uncond-Cifar10 | [url]&#40;https://pan.baidu.com/s/1E1G4JrHN6NpQM0yF5BcjAw?pwd=l29g&#41; | [url]&#40;configs/cifar10/ddm_uncond_const2_unet.yaml&#41;            |)
+[//]: # (| Uncond-Celeb   | [url]&#40;https://pan.baidu.com/s/1jhHZJTUzH_eH9xM6s9_6dQ?pwd=iewg&#41; | [url]&#40;configs/celebahq/celeb_uncond_ddm_const2_unet_ldm.yaml&#41; |)
+| Uncond-Cifar10 | None | [url](configs/cifar10/ddm_uncond_const2_unet.yaml)            |
+| Uncond-Celeb   | None | [url](configs/celebahq/celeb_uncond_ddm_const2_unet_ldm.yaml) |
 
 
 ## Contact
