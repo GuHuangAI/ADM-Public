@@ -6,6 +6,7 @@
 ![Framework](assets/framework.png)
 
 # News
+- 2025-04-18： This work inspired the paper for 3D part-aware shape generation： [**Part-aware Shape Generation with Latent 3D Diffusion of Neural Voxel Fields**](https://arxiv.org/abs/2405.00998), which was accepted by TVCG.
 - Update [ddm_const_2](ddm/ddm_const_2.py), replacing the noise scheduler \sqrt(t) with t. 
 - 2024-02-27: This work inspired the paper for Multiple Object Tracking: [**DiffMOT**](https://github.com/Kroery/DiffMOT), which was accepted by CVPR-2024.
 - 2023-12-09: This work inspired the paper for edge detection: [**DiffusionEdge**](https://github.com/GuHuangAI/DiffusionEdge), which was accepted by AAAI-2024.
