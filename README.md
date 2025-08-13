@@ -6,13 +6,13 @@
 ![Framework](assets/framework.png)
 
 # News
-- 2025-08-09: This work inspired the paper for combinatorial optimization: [**DISCO: Efficient Diffusion Solver for Large-Scale Combinatorial Optimization Problems**](https://arxiv.org/pdf/2406.19705), which was accepted by **Graphical Models**.
-- 2025-08-02: This work inspired the paper for world modeling: [**LaDi-WM: A Latent Diffusion-based World Model for Predictive Manipulation**](https://arxiv.org/abs/2505.11528), which was accepted by **CoRL 2025**.
-- 2025-06-26: This work inspired the paper for 6D pose estimation: [**Environment-Agnostic Pose: Generating Environment-independent Object Representations for 6D Pose Estimation**](https://github.com/acmff22/EA6D), which was accepted by **ICCV 2025**.
-- 2025-04-18： This work inspired the paper for 3D part-aware shape generation： [**Part-aware Shape Generation with Latent 3D Diffusion of Neural Voxel Fields**](https://arxiv.org/abs/2405.00998), which was accepted by **IEEE TVCG**.
+- 2025-08-13: This work inspired the paper for combinatorial optimization: [**DISCO: Efficient Diffusion Solver for Large-Scale Combinatorial Optimization Problems**](https://arxiv.org/pdf/2406.19705), which was accepted by **<font color=red>CAD/Graphics 2025 Best Paper</font>**, and further recommended to **<font color=red>Graphical Models</font>**.
+- 2025-08-02: This work inspired the paper for world modeling: [**LaDi-WM: A Latent Diffusion-based World Model for Predictive Manipulation**](https://guhuangai.github.io/LaDiWM.github.io/), which was accepted by **<font color=red>CoRL 2025</font>**.
+- 2025-06-26: This work inspired the paper for 6D pose estimation: [**Environment-Agnostic Pose: Generating Environment-independent Object Representations for 6D Pose Estimation**](https://github.com/acmff22/EA6D), which was accepted by **<font color=red>ICCV 2025</font>**.
+- 2025-04-18： This work inspired the paper for 3D part-aware shape generation： [**Part-aware Shape Generation with Latent 3D Diffusion of Neural Voxel Fields**](https://arxiv.org/abs/2405.00998), which was accepted by **<font color=red>IEEE TVCG</font>**.
 - Update [ddm_const_2](ddm/ddm_const_2.py), replacing the noise scheduler \sqrt(t) with t. 
-- 2024-02-27: This work inspired the paper for Multiple Object Tracking: [**DiffMOT**](https://github.com/Kroery/DiffMOT), which was accepted by **CVPR-2024**.
-- 2023-12-09: This work inspired the paper for edge detection: [**DiffusionEdge**](https://github.com/GuHuangAI/DiffusionEdge), which was accepted by **AAAI-2024**.
+- 2024-02-27: This work inspired the paper for Multiple Object Tracking: [**DiffMOT**](https://github.com/Kroery/DiffMOT), which was accepted by **<font color=red>CVPR 2024</font>**.
+- 2023-12-09: This work inspired the paper for edge detection: [**DiffusionEdge**](https://github.com/GuHuangAI/DiffusionEdge), which was accepted by **<font color=red>AAAI 2024</font>**.
 - We now update training for text-2-img, please refer to [text-2-img](#viii-training-for-text-2-iamge).
 - We now modify the two-branch UNet, resulting a single-decoder UNet architecture.  
 You can use the single-decoder UNet in [uncond-unet-sd](unet/uncond_unet_sd.py) and [cond-unet-sd](unet/cond_unet_sd.py).
