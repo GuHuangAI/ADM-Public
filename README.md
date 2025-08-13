@@ -1,10 +1,3 @@
-# ADM
-## Simultaneous Image to Zero and Zero to Noise: Diffusion Models with Analytical Image Attenuation ([![arxiv paper](https://img.shields.io/badge/arXiv-Paper-red)](https://arxiv.org/abs/2306.13720))
-![Teaser](assets/figure1.png)
-
-## Framework
-![Framework](assets/framework.png)
-
 # News
 - 2025-08-13: This work inspired the paper for combinatorial optimization: [**DISCO: Efficient Diffusion Solver for Large-Scale Combinatorial Optimization Problems**](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5347579), which was accepted by **CAD/Graphics 2025 Best Paper**, and further recommended to **Graphical Models**.
 - 2025-08-02: This work inspired the paper for world modeling: [**LaDi-WM: A Latent Diffusion-based World Model for Predictive Manipulation**](https://guhuangai.github.io/LaDiWM.github.io/), which was accepted by **CoRL 2025**.
@@ -16,6 +9,13 @@
 - We now update training for text-2-img, please refer to [text-2-img](#viii-training-for-text-2-iamge).
 - We now modify the two-branch UNet, resulting a single-decoder UNet architecture.  
 You can use the single-decoder UNet in [uncond-unet-sd](unet/uncond_unet_sd.py) and [cond-unet-sd](unet/cond_unet_sd.py).
+
+# ADM
+## Simultaneous Image to Zero and Zero to Noise: Diffusion Models with Analytical Image Attenuation ([![arxiv paper](https://img.shields.io/badge/arXiv-Paper-red)](https://arxiv.org/abs/2306.13720))
+![Teaser](assets/figure1.png)
+
+## Framework
+![Framework](assets/framework.png)
 
 ## I. Before Starting.
 1. install torch
