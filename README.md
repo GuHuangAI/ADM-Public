@@ -6,7 +6,7 @@
 ![Framework](assets/framework.png)
 
 # News
-- 2025-08-13: This work inspired the paper for combinatorial optimization: [**DISCO: Efficient Diffusion Solver for Large-Scale Combinatorial Optimization Problems**](https://arxiv.org/pdf/2406.19705), which was accepted by **CAD/Graphics 2025 Best Paper**, and further recommended to **Graphical Models**.
+- 2025-08-13: This work inspired the paper for combinatorial optimization: [**DISCO: Efficient Diffusion Solver for Large-Scale Combinatorial Optimization Problems**](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=5347579), which was accepted by **CAD/Graphics 2025 Best Paper**, and further recommended to **Graphical Models**.
 - 2025-08-02: This work inspired the paper for world modeling: [**LaDi-WM: A Latent Diffusion-based World Model for Predictive Manipulation**](https://guhuangai.github.io/LaDiWM.github.io/), which was accepted by **CoRL 2025**.
 - 2025-06-26: This work inspired the paper for 6D pose estimation: [**Environment-Agnostic Pose: Generating Environment-independent Object Representations for 6D Pose Estimation**](https://github.com/acmff22/EA6D), which was accepted by **ICCV 2025**.
 - 2025-04-18： This work inspired the paper for 3D part-aware shape generation： [**Part-aware Shape Generation with Latent 3D Diffusion of Neural Voxel Fields**](https://arxiv.org/abs/2405.00998), which was accepted by **IEEE TVCG**.
