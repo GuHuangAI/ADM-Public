@@ -168,7 +168,7 @@ Note that the pretrained weight of the AutoEncoder is downloaded from [here](htt
 
 
 ## Contact
-If you have some questions, please concat with huangai@nudt.edu.cn.
+If you have some questions, please contact huangai@nudt.edu.cn.
 ## Thanks
 Thanks to the public repos: [DDPM](https://github.com/lucidrains/denoising-diffusion-pytorch) and [LDM](https://github.com/CompVis/latent-diffusion) for providing the base code.
 ## Citation
