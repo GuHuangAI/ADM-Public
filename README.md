@@ -5,7 +5,7 @@ Based on ADM, the downstream works are listed as follows:
 |--------------------------------------------------------------------------|----------------------------|------------|--------------------------------------------------------|
 | [**DISCO**](https://authors.elsevier.com/sd/article/S1524-0703(25)00031-1) | Combinatorial optimization | 2025-08-13 | **CAD/Graphics 2025 Best Paper**<br/>>>**Graphical Models** |
 | [**LaDi-WM**](https://guhuangai.github.io/LaDiWM.github.io/)             | World modeling             | 2025-08-02 | **CoRL 2025**                                          |
-| [**EA6D**](https://github.com/acmff22/EA6D)                              | 6D Pose estimation         | 2025-06-26 | **ICCV 2025**                                          |
+| [**EA6D**](https://www.openaccess.thecvf.com/content/ICCV2025/html/Zhang_Environment-Agnostic_Pose_Generating_Environment-independent_Object_Representations_for_6D_Pose_Estimation_ICCV_2025_paper.html)                              | 6D Pose estimation         | 2025-06-26 | **ICCV 2025**                                          |
 | [**PASG**](https://arxiv.org/abs/2405.00998)                             | Shape generation           | 2025-04-18 | **IEEE TVCG**                                          |
 | [**DiffMOT**](https://github.com/Kroery/DiffMOT)                         | Multiple object tracking   | 2024-02-27 | **CVPR 2024**                                          |
 | [**DiffusionEdge**](https://github.com/GuHuangAI/DiffusionEdge)          | Edge detection             | 2023-12-09 | **AAAI 2024**                                          |
